@@ -48,8 +48,8 @@ public:
         odomToGlobalFrame_.y = 0.0f;
         odomToGlobalFrame_.theta = 0.0f;
 
-	    time_offset = 0;
-	    timesync_initialized_ = false;
+        time_offset = 0;
+        timesync_initialized_ = false;
 
         confirm.utime = 0;
         confirm.creation_time = 0;
@@ -67,15 +67,16 @@ public:
     {
         //////////// TODO: Implement your feedback controller here. //////////////////////
         
-        const float kPGain = 0.27f;
+        const float kPGain = 5.0f;
         const float kDGain = 0.0f;
         const float kIGain = 0.0003f;
 
-        const float kPTurnGain = 0.4f;
+        const float kPTurnGain = 1.5f;
         const float kDesiredSpeed = 0.2f;
         const float kMinSpeed = 0.1f;
-        const float kTurnSpeed = 1.0f;
-        const float kTurnMaxSpeed = 0.6f;
+        const float kTurnSpeed = 2.0f;
+        const float kTurnMaxSpeed = 2.0f;
+        const float kDTurnGain = 0.005f;
         const float slowDownDistance = 0.4f;
         
         mbot_motor_command_t cmd;
@@ -87,7 +88,7 @@ public:
         
         if(haveReachedTarget())
         {
-		std::cout << "TARGET REACHED\n";
+        std::cout << "TARGET REACHED\n";
             bool haveTarget = assignNextTarget();
             
             if(!haveTarget)
@@ -123,13 +124,16 @@ public:
                         turnspeed = -kTurnSpeed;
                     }
 
-                    if (std::abs(error) < 0.5) {
+                    if (std::abs(error) < 0.3) {
                         // kick in PID close to end
                         double deltaError = error - lastError_;
                         totalError_ += error;
                         lastError_ = error;
 
-                        turnspeed = (error * kPGain) + (deltaError * kDGain) + (totalError_ * kIGain);
+                        double sign=(error<0)?-1:1;
+
+                        turnspeed = (error * kPGain) + 0.5*sign; 
+                        // + (deltaError * kDGain) + (totalError_ * kIGain);
                         if (turnspeed >= 0) {
                             turnspeed = std::min(turnspeed, kTurnMaxSpeed);
                         } else {
@@ -141,11 +145,13 @@ public:
                     if(error > 0.0)
                     {
                         std::cout << "Turning left\n";
+                        std::cout<<"Angular velocity is"<<turnspeed<<"\n";
                     }
                     // Turn right if the target is to the right
                     else // if(error < 0.0)
                     {
                         std::cout << "Turning right\n";
+                        std::cout<<"Angular velocity is"<<turnspeed<<"\n";
                     }
                     cmd.trans_v = 0;
                     cmd.angular_v = turnspeed;
@@ -158,35 +164,39 @@ public:
                     cmd.angular_v = 0;
                     totalError_ = 0;
                     lastError_ = 0;
-		            state_ = DRIVE;
+                    state_ = DRIVE;
                 }
             }
             else if(state_ == DRIVE) // Use feedback to drive to the target once approximately pointed in the correct direction
             {
-                double speed = kDesiredSpeed;
+                double speed = kDesiredSpeed + 0.08;
 
                 float distToGoal = std::sqrt(std::pow(target.x - pose.x, 2.0f) + std::pow(target.y - pose.y, 2.0f));
                 
                 if (distToGoal < slowDownDistance) {
-                    speed = kMinSpeed;
+                    speed= kDesiredSpeed*distToGoal/slowDownDistance + 0.08;
+                    // speed = kMinSpeed * (distToGoal - slowDownDistance) + kDesiredSpeed;
                 }
 
                 //go slower if the angle error is greater
-		        speed *= std::cos(error);
+                speed *= std::cos(error);
                 //don't go backwards
                 speed = std::max(0.0f, float(speed));
 
                 cmd.trans_v = speed;
+                double deltaError = error - lastError_;
+                lastError_ = error;
+
 
                 //pid control the angular v based on angle error
-                cmd.angular_v = error * kPTurnGain;
+                cmd.angular_v = error * kPTurnGain +  (deltaError * kDTurnGain);
                 //angular velocity must not exceed 1.5 the desired turnspeed
                 if (cmd.angular_v >= 0.0) {
-                    cmd.angular_v = std::min(std::abs(cmd.angular_v), kTurnMaxSpeed * 1.5f);
+                    cmd.angular_v = std::min(std::abs(cmd.angular_v), kTurnMaxSpeed * 1.0f);
                 } else {
-                    cmd.angular_v = -std::min(std::abs(cmd.angular_v), kTurnMaxSpeed * 1.5f);
+                    cmd.angular_v = -std::min(std::abs(cmd.angular_v), kTurnMaxSpeed * 1.0f);
                 }
-		}
+        }
             else
             {
                 std::cerr << "ERROR: MotionController: Entered unknown state: " << state_ << '\n';
@@ -199,8 +209,8 @@ public:
     bool timesync_initialized(){ return timesync_initialized_; }
 
     void handleTimesync(const lcm::ReceiveBuffer* buf, const std::string& channel, const timestamp_t* timesync){
-	timesync_initialized_ = true;
-	time_offset = timesync->utime-utime_now();
+    timesync_initialized_ = true;
+    time_offset = timesync->utime-utime_now();
     }
     
     void handlePath(const lcm::ReceiveBuffer* buf, const std::string& channel, const robot_path_t* path)
@@ -210,10 +220,10 @@ public:
         targets_ = path->path;
         std::reverse(targets_.begin(), targets_.end()); // store first at back to allow for easy pop_back()
 
-    	std::cout << "received new path at time: " << path->utime << "\n";
-    	for(auto pose : targets_){
-    		std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
-    	}std::cout << "\n";
+        std::cout << "received new path at time: " << path->utime << "\n";
+        for(auto pose : targets_){
+            std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
+        }std::cout << "\n";
 
         assignNextTarget();
 
@@ -268,16 +278,16 @@ private:
     lcm::LCM * lcmInstance;
 
     int64_t now(){
-	return utime_now()+time_offset;
+    return utime_now()+time_offset;
     }
 
     bool haveReachedTarget(void)
     {
         const float kPosTolerance = 0.1f;
-	    const float kFinalPosTolerance = 0.05f;
+        const float kFinalPosTolerance = 0.05f;
 
         //tolerance for intermediate waypoints can be more lenient
-    	float tolerance = (targets_.size() == 1) ? kFinalPosTolerance : kPosTolerance;
+        float tolerance = (targets_.size() == 1) ? kFinalPosTolerance : kPosTolerance;
         
         // There's no target, so we're there by default.
         if(targets_.empty())
@@ -360,11 +370,11 @@ int main(int argc, char** argv)
     {
         lcmInstance.handleTimeout(50);  // update at 20Hz minimum
 
-    	if(controller.timesync_initialized()){
-            	mbot_motor_command_t cmd = controller.updateCommand();
+        if(controller.timesync_initialized()){
+                mbot_motor_command_t cmd = controller.updateCommand();
 
-            	lcmInstance.publish(MBOT_MOTOR_COMMAND_CHANNEL, &cmd);
-    	}
+                lcmInstance.publish(MBOT_MOTOR_COMMAND_CHANNEL, &cmd);
+        }
     }
     
     return 0;
