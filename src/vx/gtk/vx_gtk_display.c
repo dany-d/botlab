@@ -31,6 +31,9 @@
 // XXX This constant shows up in a couple places
 #define UI_ANIMATE_MS 100
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 typedef struct
 {
     int viewport[4]; // [0,0,w,h]

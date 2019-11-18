@@ -14,6 +14,10 @@ Mapping::Mapping(float maxLaserDistance, int8_t hitOdds, int8_t missOdds)
 {
 }
 
+int metersToCellX(float x, OccupancyGrid& map)
+{
+    return std::floor(x * map.cellsPerMeter()) + (map.widthInCells() / 2);
+}
 
 void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGrid& map)
 {
@@ -37,19 +41,17 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 	// Creating for loop to iterate through each laser array
 	for (unsigned int i=0; i<ml_scan.size(); i++){
     adjusted_ray_t ad_ray = ml_scan.at(i);
-    // Current robot pose in world frame
-    int x0 = ad_ray.origin.x  * map.cellsPerMeter();
-    int y0 = ad_ray.origin.y  * map.cellsPerMeter();
+    	// Current robot pose in world frame
+    	int x0 = metersToCellX(ad_ray.origin.x, map);
+    	int y0 = metersToCellX(ad_ray.origin.y, map);
 
-    float range = ad_ray.range;
-    float theta = ad_ray.theta; // This is the global frame theta!
+    	float range = ad_ray.range;
+    	float theta = ad_ray.theta; // This is the global frame theta!
+    	cout<<i<<" "<<x0<<" "<<y0<<" "<<range<<" "<<theta<<endl;
 
-	  // End of laser scan in world frame
-    int x1 = (x0 + range*cos(theta)) * map.cellsPerMeter();
-    int y1 = (y0 + range*sin(theta)) * map.cellsPerMeter();
-
-    cout<<"Ray: "<<i<<" "<<x0<<" "<<y0<<" "<<x1<<" "<<y1<<endl;
-
+		// End of laser scan in world frame
+    	int x1 = metersToCellX(ad_ray.origin.x + range*cos(theta), map);
+   		int y1 = metersToCellX(ad_ray.origin.y + range*sin(theta), map);
 		int dx = abs(x1-x0);
 		int dy = abs(y1-y0);
 		int sx = (x0<x1)? 1 : -1;
@@ -57,9 +59,8 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 		int err = dx-dy;
 		int x = x0;
 		int y = y0;
-
-    //TODO: inifite loop here.
-		while(x!=x1 || y!=y1){
+    	//TODO: inifite loop here.
+		while(x != x1 || y != y1){
 
 		  // Updating the odds for each cell through which laser array passes
 			CellOdds new_logOdd;
@@ -83,50 +84,39 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 					y += sy;
 				}
 	 	}
-    CellOdds new_logOdd;
-    new_logOdd = map.logOdds(x1,y1) +  kHitOdds_;
-    new_logOdd = new_logOdd > 127 ? 127: new_logOdd;
-    map.setLogOdds(x1,y1, new_logOdd);
-    cout<<"Hit: "<<x1<<" "<<y1<<" "<< int(new_logOdd)<<endl;
+	 	CellOdds new_logOdd = map.logOdds(x1,y1) +  kHitOdds_;
+	 	new_logOdd = new_logOdd > 127 ? 127: new_logOdd;
+    	map.setLogOdds(x1,y1, new_logOdd);
+
 	}
   last_pose_ = pose;
 }
 
-// CellOdds inverse_sensor_model(int x, int y, ){
-//
-// 	float r = sqrt(dx^2 + dy^2);
-// 	float phi = atan2(dy,dx)-pose.theta;
-//
-// 	int j=0; // Creating index for iterating through all the rays of laser
-// 	float min=0.0;
-// 	int min_index=0; // Index corresponding to k in inverse sensor model
-//
-// 	// function for finding index of laser ray
-// 	while(j<scan.num_ranges)
-// 	{
-// 		float difference = abs(phi-scan.thetas[j]);
-// 		if (difference<min){
-// 			min=difference;
-// 			min_index=j;
-// 			j++;
-// 	}
-//
+// CellOdds inverse_sensor_model(adjusted_ray_t ad_ray, int x, int y, OccupancyGrid& map, float l0){
+
+// 	float x_i = cellToMetersX(x, map);
+// 	float y_i = cellToMetersX(y, map);
+// 	float x_0 = ad_ray.origin.x;
+// 	float y_0 = ad_ray.origin.y;
+
+// 	float r = sqrt((x_i - x_0) * (x_i - x_0) + (y_i - y_0) * (y_i - y_0));
+// 	float phi = atan2(y_i - y_0, x_i - x_0) - ad_ray.theta;
+// 	float zkt = ad_ray.range;
+// 	float alpha = sqrt(2) * map.metersPerCell();
+// 	float beta = atan2(r, alpha / 2);
+// 	float kMaxLaserDistance_=10.0;
+// 	int8_t kHitOdds_=3;
+// 	int8_t kMissOdds_=1;
+
 // 	// kMaxLaserDistance_ is private member of Mapping class
-// 	if (r>std::min(kMaxLaserDistance_, zkt + alpha/2) || abs(phi-scan.thetas[k])>(2*M_PI/2)){
+// 	if (r > std::min(kMaxLaserDistance_, zkt + alpha/2) || abs(phi)>(beta/2)){
 // 		return l0;
 // 	}
-//
+
 // 	if (zkt < kMaxLaserDistance_ && abs(r - zkt)<alpha/2){
 // 		return kHitOdds_;
 // 	}
-//
-// 	if (r<=zkt)
-// 		return kMissOdds_;
-// }
-//
-//
 
-// ITEMS UNKNOWN are
-// 	zkt
-// 	alpha
-// 	lo
+// 	if (r<=zkt)
+// 		return -kMissOdds_;
+// }
