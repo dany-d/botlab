@@ -6,7 +6,7 @@
 #include <cmath> // Importing library for all the math function such as cos, atan2
 #include <algorithm> // Importing library for using the min fucntion
 
-
+using namespace std;
 
 // Intialization constructor for setting the range of the laser and the amount by which log odds needs to be updated
 Mapping::Mapping(float maxLaserDistance, int8_t hitOdds, int8_t missOdds)
@@ -14,6 +14,10 @@ Mapping::Mapping(float maxLaserDistance, int8_t hitOdds, int8_t missOdds)
 {
 }
 
+int metersToCellX(float x, OccupancyGrid &map)
+{
+    return std::floor(x * map.cellsPerMeter()) + (map.widthInCells() / 2);
+}
 
 void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGrid& map)
 {
@@ -33,7 +37,6 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 
 	// This algorith is supposed to update the log odds associated with each cell //
 
-
 	// Need to determine the cells through which the laser passes through for each ray of laser
 	// Creating for loop to iterate through each laser array
 	for (unsigned int i=0; i<ml_scan.size(); i++){
@@ -44,6 +47,7 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 
     float range = ad_ray.range;
     float theta = ad_ray.theta; // This is the global frame theta!
+    cout<<i<<" "<<x0<<" "<<y0<<" "<<range<<" "<<theta<<endl;
 
 	  // End of laser scan in world frame
     float x1 = x0 + range*cos(theta);
@@ -57,11 +61,13 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 		float x = x0;
 		float y = y0;
 
+    //TODO: inifite loop here.
 		while(x != x1 || y != y1){
 
 		  // Updating the odds for each cell through which laser array passes
 			CellOdds new_logOdd;
       //TODO: need to transform between global (meter) to occupancy grid (int) frame
+      //TODO: clamp logOdds
 			new_logOdd = map.logOdds(x, y)  - kMissOdds_;
 			map.setLogOdds(x, y, new_logOdd);
 
