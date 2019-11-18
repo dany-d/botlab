@@ -66,17 +66,13 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 		int err = dx-dy;
 		int x = x0;
 		int y = y0;
-    	//TODO: inifite loop here.
 		while(x != x1 || y != y1){
 
 		  // Updating the odds for each cell through which laser array passes
-      //TODO: need to transform between global (meter) to occupancy grid (int) frame
-      //TODO: clamp logOdds
 			new_logOdd = map.logOdds(x,y)  - kMissOdds_;
       new_logOdd = new_logOdd < -127 ? -127: new_logOdd;
 			map.setLogOdds(x,y, new_logOdd);
-      if (x == 124 && y==123)
-        cout<<"Miss: "<<x<<" "<<y<<" "<< int(new_logOdd)<<endl;
+
 			// Computing the next x,y cells through which laser passes using Breshenham's Algorithm
 	    int e2 = 2*err;
 	    if (e2 >= -dy)
@@ -99,32 +95,3 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
   //cout<< int(map.logOdds(124,123)) <<endl;
   last_pose_ = pose;
 }
-
-// CellOdds inverse_sensor_model(adjusted_ray_t ad_ray, int x, int y, OccupancyGrid& map, float l0){
-
-// 	float x_i = cellToMetersX(x, map);
-// 	float y_i = cellToMetersX(y, map);
-// 	float x_0 = ad_ray.origin.x;
-// 	float y_0 = ad_ray.origin.y;
-
-// 	float r = sqrt((x_i - x_0) * (x_i - x_0) + (y_i - y_0) * (y_i - y_0));
-// 	float phi = atan2(y_i - y_0, x_i - x_0) - ad_ray.theta;
-// 	float zkt = ad_ray.range;
-// 	float alpha = sqrt(2) * map.metersPerCell();
-// 	float beta = atan2(r, alpha / 2);
-// 	float kMaxLaserDistance_=10.0;
-// 	int8_t kHitOdds_=3;
-// 	int8_t kMissOdds_=1;
-
-// 	// kMaxLaserDistance_ is private member of Mapping class
-// 	if (r > std::min(kMaxLaserDistance_, zkt + alpha/2) || abs(phi)>(beta/2)){
-// 		return l0;
-// 	}
-
-// 	if (zkt < kMaxLaserDistance_ && abs(r - zkt)<alpha/2){
-// 		return kHitOdds_;
-// 	}
-
-// 	if (r<=zkt)
-// 		return -kMissOdds_;
-// }
