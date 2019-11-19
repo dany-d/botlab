@@ -35,19 +35,21 @@ bool ActionModel::updateAction(const particle_t &sample)
     float th1 = sample.parent_pose.theta;
     float alpha = atan2(y2 - y1, x2 - x1) - th1;
 
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+
     if (sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2) + (th1 + th2) * (th1 + th2)) > 0.1)
     {
 
         float del_s = sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2));
 
         // creating distribution
-        for (int i_dist = 0; i_dist < N_dist; ++i_dist)
-        {
-
-            e1[i_dist] = bot_gauss_rand(0, k1 * abs(alpha));
-            e2[i_dist] = bot_gauss_rand(0, k2 * abs(del_s));
-            e3[i_dist] = bot_gauss_rand(0, k1 * abs(th2 - th1 - alpha));
-        }
+        std::normal_distribution<float> e1(0, k1 * abs(alpha));
+        std::normal_distribution<float> e2(0, k2 * abs(del_s));
+        std::normal_distribution<float> e3(0, k1 * abs(th2 - th1 - alpha));
+        // for (int i_sample = 0; i_sample < 1000; ++i_sample){
+        // for (int i_dist = 0; i_dist < N_dist; ++i_dist)
+        // }
         return 0;
     }
     else
@@ -59,7 +61,7 @@ bool ActionModel::updateAction(const particle_t &sample)
 particle_t ActionModel::applyAction(const particle_t &sample)
 
 {
-    ////////////// TODO: Implement your code for sampling new poses from the distribution computed in updateAction //////////////////////
+    ////////////// TODO: Implement your code for sampling new poses from the d  istribution computed in updateAction //////////////////////
     // Make sure you create a new valid particle_t. Don't forget to set the new time and new parent_pose.
 
     float x2 = sample.pose.x;
@@ -74,13 +76,14 @@ particle_t ActionModel::applyAction(const particle_t &sample)
     float sampled_val;
     float mean = 0.0;
     float stddev = 1.0;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::normal_distribution<float> d(mean, stddev);
 
-    // for (int i_sample = 0; i_sample < 1000; ++i_sample)
+
     // {
     // get random number with normal distribution using gen as random source
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<float> d(mean,stddev);
+    
     sampled_val = d(gen);
     e1[sampled_val];
     e2[sampled_val];
