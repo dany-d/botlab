@@ -40,6 +40,7 @@ private:
     ///////// TODO: Add any private members for your SensorModel ///////////////////
     float f_;
     int rayStride_;
+    int sensor_thres;
 };
 
 #endif // SLAM_SENSOR_MODEL_HPP

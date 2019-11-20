@@ -7,9 +7,10 @@
 
 SensorModel::SensorModel(void)
 {
-    ///////// TODO: Handle any initialization needed for your sensor model
+    ///////// TODO: Tune this f_ and sensor_thres
     f_ = 0.8;
     rayStride_ = 1;
+    sensor_thres = 50;
 }
 
 
@@ -28,7 +29,8 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
       int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
       int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
       int endLogOdd = map.logOdds(x1,y1);
-      if (endLogOdd > 50){
+      
+      if (endLogOdd > sensor_thres){
         likelihood += endLogOdd;
       }
       else{
