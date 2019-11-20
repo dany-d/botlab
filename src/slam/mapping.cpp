@@ -29,7 +29,7 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
     //////////////// TODO: Implement your occupancy grid algorithm here ///////////////////////
 
   // Intialization
-  // If there is no last pose, then we need to start at next timestamp
+  // If there is no last pose, then we need to start at next timestamp	
   if(!started_){
     last_pose_ = pose;
     map.reset();
