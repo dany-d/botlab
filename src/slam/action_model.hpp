@@ -43,7 +43,7 @@ public:
     * \return   The pose transform distribution representing the uncertainty of the robot's motion.
     */
     bool updateAction(const pose_xyt_t& odometry);
-    
+
     /**
     * applyAction applies the motion to the provided sample and returns a new sample that
     * can be part of the proposal distribution for the particle filter.
@@ -56,6 +56,13 @@ public:
 private:
     
     ////////// TODO: Add private member variables needed for you implementation ///////////////////
+    double k1,k2,k3;
+    float sd1;
+    float sd2;
+    float sd3;
+    float e1,e2,e3,del_s;
+    pose_xyt_t last_pose_;
+    bool started_ = false;
 };
 
 #endif // SLAM_ACTION_MODEL_HPP
