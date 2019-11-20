@@ -45,10 +45,10 @@ bool ActionModel::updateAction(const pose_xyt_t& odometry)
 
     ///// TODO: Threshold need to be tuned
 
-    if (sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2) + (th1 + th2) * (th1 + th2)) > 0.1) 
+    if (sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)) > 0.1 || abs(th1 - th2)>0.1 )
     {
 
-        del_s = sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2));
+        del_s = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 
         // creating distribution
         sd1 = k1 * abs(alpha);
@@ -92,7 +92,7 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     std::normal_distribution<float> d1(0,sd1);
     std::normal_distribution<float> d2(0,sd2);
     std::normal_distribution<float> d3(0,sd3);
-    
+
     // sampled_val = d(gen);
     float e1 = d1(gen);
     float e2 = d2(gen);
@@ -102,7 +102,7 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     new_sample.parent_pose = sample.pose;
     new_sample.pose.x = x1 + (del_s + e2) * cos(th1 + alpha + e1);
     new_sample.pose.y = y1 + (del_s + e2) * cos(th1 + alpha + e1);
-    new_sample.pose.theta = th1 + ((th1 - th2) + e1 + e3);
+    new_sample.pose.theta = th1 + ((th2 - th1) + e1 + e3);
     new_sample.pose.utime = utime_now();
     new_sample.weight = 0;
 
