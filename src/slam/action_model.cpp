@@ -16,9 +16,6 @@ ActionModel::ActionModel(void)
     sd1 = 0;
     sd2 = 0;
     sd3 = 0;
-    e1 = 0;
-    e2 = 0;
-    e3 = 0;
     del_s = 0;
 }
 
@@ -97,10 +94,9 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     std::normal_distribution<float> d3(0,sd3);
     
     // sampled_val = d(gen);
-    e1 = d1(gen);
-    e2 = d2(gen);
-    e3 = d3(gen);
-    
+    float e1 = d1(gen);
+    float e2 = d2(gen);
+    float e3 = d3(gen);
 
 
     new_sample.parent_pose = sample.pose;

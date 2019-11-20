@@ -60,7 +60,7 @@ private:
     float sd1;
     float sd2;
     float sd3;
-    float e1,e2,e3,del_s;
+    float del_s;
     pose_xyt_t last_pose_;
     bool started_ = false;
 };
