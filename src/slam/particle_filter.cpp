@@ -14,7 +14,7 @@ ParticleFilter::ParticleFilter(int numParticles)
 
 void ParticleFilter::initializeFilterAtPose(const pose_xyt_t& pose)
 {
-    for (int i_num = 0; i < kNumParticles_; ++i){
+    for (int i_num = 0; i_num < kNumParticles_; ++i_num){
         posterior_[i_num].pose.x = rand() % 5 * 0.01;
         posterior_[i_num].pose.y = rand() % 5 * 0.01;
         posterior_[i_num].pose.theta = 0 % 100 * 0.0154;
@@ -87,7 +87,8 @@ std::vector<particle_t> ParticleFilter::resamplePosteriorDistribution(void)
 std::vector<particle_t> ParticleFilter::computeProposalDistribution(const std::vector<particle_t>& prior)
 {
     std::vector<particle_t> proposal;
-    for (int i_num = 0; i < kNumParticles_; ++i){
+    for (int i_num = 0; i_num < kNumParticles_; ++i_num)
+    {
         proposal[i_num] = (actionModel_.applyAction(prior[i_num]));
     }
        
