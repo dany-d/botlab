@@ -104,7 +104,7 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     new_sample.pose.y = y1 + (del_s + e2) * cos(th1 + alpha + e1);
     new_sample.pose.theta = th1 + ((th2 - th1) + e1 + e3);
     new_sample.pose.utime = utime_now();
-    new_sample.weight = 0;
+    // new_sample.weight = 0;
 
     // }
 
