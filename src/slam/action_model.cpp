@@ -4,53 +4,68 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
-#include "rand_util.h"
 #include <random>
-#include "image_source.h"
+#include <common/timestamp.h>
+// #include "image_source.h"
 
 ActionModel::ActionModel(void)
 {
     k1 = 1;
     k2 = 1;
-    N_dist = 1000;
-
-    e1[N_dist];
-    e2[N_dist];
-    e3[N_dist];
-
-    //////////////// TODO: Handle any initialization for your ActionModel ////////////////////////
-
+    // N_dist = 1000;
+    sd1 = 0;
+    sd2 = 0;
+    sd3 = 0;
+    e1 = 0;
+    e2 = 0;
+    e3 = 0;
+    del_s = 0;
 }
 
-bool ActionModel::updateAction(const particle_t& sample)
+bool ActionModel::updateAction(const pose_xyt_t& odometry)
 {
-    ////////////// TODO: Implement code here to compute a new distribution of the motion of the robot ////////////////
 
-    
+    if (!started_)
+    {
+        last_pose_ = odometry;
+        started_ = true;
+        return false;
+    }
+
     // get initial and final poses
-    float x2 = sample.pose.x;
-    float y2 = sample.pose.y;
-    float th2 = sample.pose.theta;
+    float x2 = odometry.x;
+    float y2 = odometry.y;
+    float th2 = odometry.theta;
 
-    float x1 = sample.parent_pose.x;
-    float y1 = sample.parent_pose.y;
-    float th1 = sample.parent_pose.theta;
-    float alpha = atan2(y2 - y1, x2 - x1)-th1;
+    float x1 = last_pose_.x;
+    float y1 = last_pose_.y;
+    float th1 = last_pose_.theta;
+    float alpha = atan2(y2 - y1, x2 - x1) - th1;
 
-    if (sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2) + (th1 + th2) * (th1 + th2)) > 0.1){
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
 
-        float del_s = sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2));
+
+    ///// TODO: Threshold need to be tuned
+
+    if (sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2) + (th1 + th2) * (th1 + th2)) > 0.1) 
+    {
+
+        del_s = sqrt((x1 - x2) * (x1 - x2) + (y1 + y2) * (y1 + y2));
 
         // creating distribution
-        for (int i_dist = 0;i_dist < N_dist;++i_dist){
+        sd1 = k1 * abs(alpha);
+        sd2 = k2 * abs(del_s);
+        sd3 = k1 * abs(th2 - th1 - alpha);
+        last_pose_ = odometry;
 
-            e1[i_dist] = bot_gauss_rand(0, k1*abs(alpha));
-            e2[i_dist] = bot_gauss_rand(0, k2*abs(del_s));
-            e3[i_dist] = bot_gauss_rand(0, k1*abs(th2-th1 - alpha));
-        }
-        return 0;
+        // for (int i_sample = 0; i_sample < 1000; ++i_sample){
+        // for (int i_dist = 0; i_dist < N_dist; ++i_dist)
+        // }
+        return true;
     }
-    else{
+    else
+    {
         return false;
     }
 }
@@ -58,9 +73,8 @@ bool ActionModel::updateAction(const particle_t& sample)
 particle_t ActionModel::applyAction(const particle_t& sample)
 
 {
-    ////////////// TODO: Implement your code for sampling new poses from the distribution computed in updateAction //////////////////////
+    ////////////// TODO: Implement your code for sampling new poses from the d  istribution computed in updateAction //////////////////////
     // Make sure you create a new valid particle_t. Don't forget to set the new time and new parent_pose.
-
 
     float x2 = sample.pose.x;
     float y2 = sample.pose.y;
@@ -70,31 +84,31 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     float y1 = sample.parent_pose.y;
     float th1 = sample.parent_pose.theta;
     float alpha = atan2(y2 - y1, x2 - x1) - th1;
+    particle_t new_sample;
 
 
-    float sampled_val;
-    float mean = 0.0; 
-    float stddev = 1.0;
+    // {
+    // get random number with normal distribution using gen as random source
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::normal_distribution<float> d(mean, stddev);
+    // std::normal_distribution<float> d(mean,stddev);
+    std::normal_distribution<float> d1(0,sd1);
+    std::normal_distribution<float> d2(0,sd2);
+    std::normal_distribution<float> d3(0,sd3);
+    
+    // sampled_val = d(gen);
+    e1 = d1(gen);
+    e2 = d2(gen);
+    e3 = d3(gen);
+    
 
 
-    // for (int i_sample = 0; i_sample < 1000; ++i_sample)
-    // {
-        // get random number with normal distribution using gen as random source
-        sampled_val = d(gen);
-        e1[sampled_val];
-        e2[sampled_val];
-        e3[sampled_val];
-
-        new_sample.parent_pose = sample.pose;
-        new_sample.pose.x = x1 + (del_s + e2)*cos(th1 + alpha + e1);
-        new_sample.pose.y = y1 + (del_s + e2) * cos(th1 + alpha + e1);
-        new_sample.pose.theta = th1 + ((th1 - th2) + e1 + e3);
-        new_sample.pose.utime = utime_now();
-        new_sample.weight = 0;
-
+    new_sample.parent_pose = sample.pose;
+    new_sample.pose.x = x1 + (del_s + e2) * cos(th1 + alpha + e1);
+    new_sample.pose.y = y1 + (del_s + e2) * cos(th1 + alpha + e1);
+    new_sample.pose.theta = th1 + ((th1 - th2) + e1 + e3);
+    new_sample.pose.utime = utime_now();
+    new_sample.weight = 0;
 
     // }
 
