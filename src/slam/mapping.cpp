@@ -14,16 +14,6 @@ Mapping::Mapping(float maxLaserDistance, int8_t hitOdds, int8_t missOdds)
 {
 }
 
-int metersToCellX(float x, OccupancyGrid& map)
-{
-    return std::floor(x * map.cellsPerMeter()) + (map.widthInCells() / 2);
-}
-
-int metersToCellY(float x, OccupancyGrid& map)
-{
-    return std::floor(x * map.cellsPerMeter()) + (map.heightInCells() / 2);
-}
-
 void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGrid& map)
 {
     //////////////// TODO: Implement your occupancy grid algorithm here ///////////////////////
@@ -47,8 +37,8 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 	for (unsigned int i=0; i<ml_scan.size(); i++){
     adjusted_ray_t ad_ray = ml_scan.at(i);
   	// Current robot pose in world frame
-  	int x0 = metersToCellX(ad_ray.origin.x, map);
-  	int y0 = metersToCellY(ad_ray.origin.y, map);
+  	int x0 = map.metersToCellX(ad_ray.origin.x);
+  	int y0 = map.metersToCellY(ad_ray.origin.y);
 
   	float range = ad_ray.range;
   	float theta = ad_ray.theta; // This is the global frame theta!
@@ -57,8 +47,8 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
          continue;
       }
 		// End of laser scan in world frame
-    int x1 = metersToCellX(ad_ray.origin.x + range*cos(theta), map);
-   	int y1 = metersToCellY(ad_ray.origin.y + range*sin(theta), map);
+    int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
+   	int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
 		int dx = abs(x1-x0);
 		int dy = abs(y1-y0);
 		int sx = (x0<x1)? 1 : -1;
