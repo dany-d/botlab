@@ -98,7 +98,6 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     float e2 = d2(gen);
     float e3 = d3(gen);
 
-
     new_sample.parent_pose = sample.pose;
     new_sample.pose.x = x1 + (del_s + e2) * cos(th1 + alpha + e1);
     new_sample.pose.y = y1 + (del_s + e2) * cos(th1 + alpha + e1);
