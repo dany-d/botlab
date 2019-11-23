@@ -8,7 +8,7 @@
 SensorModel::SensorModel(void)
 {
     ///////// TODO: Handle any initialization needed for your sensor model
-    f_ = 0.5;
+    f_ = 0.8;
     rayStride_ = 1;
     obs_thres = 0;
 }

@@ -2,6 +2,7 @@
 #include <slam/occupancy_grid.hpp>
 #include <lcmtypes/pose_xyt_t.hpp>
 #include <cassert>
+#include <common/timestamp.h>
 using namespace std;
 
 
@@ -19,6 +20,7 @@ void ParticleFilter::initializeFilterAtPose(const pose_xyt_t& pose)
         posterior_[i_num].pose.x = rand()%5*0.01 + pose.x;
         posterior_[i_num].pose.y = rand()%5*0.01 + pose.y;
         posterior_[i_num].pose.theta = rand()%10*0.0154 + pose.theta;
+        posterior_[i_num].pose.utime = pose.utime;
         posterior_[i_num].parent_pose = pose;
         posterior_[i_num].weight = 1.0 /kNumParticles_;
     }
@@ -43,6 +45,7 @@ pose_xyt_t ParticleFilter::updateFilter(const pose_xyt_t&      odometry,
         auto prior = resamplePosteriorDistribution();
         std::cout<<"prior x:"<<prior[50].pose.x<<" y:"<<prior[50].pose.y<<std::endl;
         std::cout<<"prior x:"<<prior[150].pose.x<<" y:"<<prior[150].pose.y<<std::endl;
+        std::cout<<"prior time:"<<prior[150].pose.utime<<std::endl;
         std::cout<<"second"<<std::endl;
         auto proposal = computeProposalDistribution(prior);
         std::cout<<"proposal x:"<<proposal[50].pose.x<<" y:"<<proposal[50].pose.y<<std::endl;
@@ -129,6 +132,7 @@ std::vector<particle_t> ParticleFilter::computeNormalizedPosterior(const std::ve
     /////////// TODO: Implement your algorithm for computing the normalized posterior distribution using the 
     ///////////       particles in the proposal distribution
     std::vector<particle_t> posterior;
+    int64_t curr_time = utime_now();
     double alpha = 0.0;
     for (int i_num = 0; i_num < kNumParticles_; i_num++)
     {
@@ -141,6 +145,7 @@ std::vector<particle_t> ParticleFilter::computeNormalizedPosterior(const std::ve
     for (int i_num = 0; i_num < kNumParticles_; i_num++)
     {
         posterior[i_num].weight /= alpha;
+        posterior[i_num].pose.utime = curr_time;
     }
     std::cout<<"likelihood: "<<alpha<<std::endl;
     // std::cout<<"Hit: "<<7<<" "<<std::endl;
