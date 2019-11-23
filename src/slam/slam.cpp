@@ -273,7 +273,7 @@ void OccupancyGridSLAM::updateMap(void)
 
     // Publish the map even in localization-only mode to ensure the visualization is meaningful
     // Send every 5th map -- about 1Hz update rate for map output -- can change if want more or less during operation
-    if(mapUpdateCount_ % 15 == 0)
+    if(mapUpdateCount_ % 5 == 0)
     {
         auto mapMessage = map_.toLCM();
         lcm_.publish(SLAM_MAP_CHANNEL, &mapMessage);
