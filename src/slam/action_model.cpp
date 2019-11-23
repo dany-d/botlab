@@ -56,7 +56,7 @@ bool ActionModel::updateAction(const pose_xyt_t& odometry)
 
     ///// TODO: Threshold need to be tuned
 
-    if (del_s > 0.01 || (abs(del_theta) > 0.1) )
+    if (del_s > 0.01 || (abs(del_theta) > 0.01) )
     {   // for (int i_sample = 0; i_sample < 1000; ++i_sample){
         // for (int i_dist = 0; i_dist < N_dist; ++i_dist)
         // }
@@ -93,16 +93,16 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     e2 = d2(gen);
     e3 = d3(gen);
     
+    new_sample.parent_pose = sample.pose;
     new_sample.pose.x = x1 + (del_s + e2) * cos(th1 + alpha + e1);
     new_sample.pose.y = y1 + (del_s + e2) * sin(th1 + alpha + e1);
     new_sample.pose.theta = th1 + (del_theta + e1 + e3);
     new_sample.pose.utime = utime_now();
-    new_sample.parent_pose = sample.pose;
     new_sample.weight = 0.0;
     // std::cout<<"new sample x: "<<new_sample.pose.x<<" y: "<<new_sample.pose.y<<std::endl;
     // std::cout<<"sample x: "<<sample.pose.x<<" y: "<<sample.pose.y<<std::endl;
 
     // }
 
-    return new_sample;
+    return sample;
 }
