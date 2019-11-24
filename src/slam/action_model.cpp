@@ -10,7 +10,7 @@
 
 ActionModel::ActionModel(void)
 {
-    k1 = 0.01;
+    k1 = 0.008;
     k2 = 0.01;
     // N_dist = 1000;
     // sd1 = 0;
@@ -96,7 +96,7 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     new_sample.parent_pose = sample.pose;
     new_sample.pose.x = x1 + (del_s + e2) * cos(th1 + alpha + e1);
     new_sample.pose.y = y1 + (del_s + e2) * sin(th1 + alpha + e1);
-    new_sample.pose.theta = th1 + (del_theta + e1 + e3);
+    new_sample.pose.theta = wrap_to_pi(th1 + (del_theta + e1 + e3));
     // new_sample.pose.utime = sample.pose.utime;
     // new_sample.weight = 0.0;
     // std::cout<<"action del s: "<<del_s<<" del theta: "<<del_theta<<std::endl;

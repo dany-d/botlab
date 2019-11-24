@@ -8,8 +8,8 @@
 SensorModel::SensorModel(void)
 {
     ///////// TODO: Handle any initialization needed for your sensor model
-    f_ = 0.8;
-    rayStride_ = 1;
+    f_ = 0.9;
+    rayStride_ = 4;
     obs_thres = 0;
 }
 
@@ -30,7 +30,7 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
       int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
       int endLogOdd = map.logOdds(x1,y1);
       if (endLogOdd > obs_thres){
-        likelihood += double(endLogOdd+127);
+        likelihood += double((endLogOdd+127)/254);
       }
       else{
         int x2 = map.metersToCellX(ad_ray.origin.x + (range+map.metersPerCell()) *cos(theta));
@@ -38,7 +38,7 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
 
         int x3= map.metersToCellX(ad_ray.origin.x + (range-map.metersPerCell()) *cos(theta));
         int y3 = map.metersToCellY(ad_ray.origin.y + (range-map.metersPerCell()) *sin(theta));
-        likelihood += f_*double(map.logOdds(x2,y2) +127 + map.logOdds(x3,y3)+127);
+        likelihood += f_*double((map.logOdds(x2,y2) +127 + map.logOdds(x3,y3)+127)/2/254);
       }
     }
     return likelihood;
