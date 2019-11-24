@@ -10,8 +10,8 @@
 
 ActionModel::ActionModel(void)
 {
-    k1 = 0.008;
-    k2 = 0.01;
+    k1 = 0.8;
+    k2 = 0.1;
     // N_dist = 1000;
     // sd1 = 0;
     // sd2 = 0;
@@ -31,6 +31,9 @@ bool ActionModel::updateAction(const pose_xyt_t& odometry)
         return false;
     }
 
+    ///// TODO: Threshold need to be tuned
+
+
     // get initial and final poses
     float x2 = odometry.x;
     float y2 = odometry.y;
@@ -43,29 +46,19 @@ bool ActionModel::updateAction(const pose_xyt_t& odometry)
     del_theta = th2 -th1;
     del_s = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 
+    if (del_s < 0.01 && (fabs(del_theta) < 0.001)){
+      return false;
+    }
     // creating distribution
-    sd1 = k1 * abs(alpha);
-    sd2 = k2 * abs(del_s);
-    sd3 = k1 * abs(th2 - th1 - alpha);
+    sd1 = k1 * fabs(alpha);
+    sd2 = k2 * fabs(del_s);
+    sd3 = k1 * fabs(del_theta - alpha);
     last_pose_ = odometry;
     // std::cout<<"odometry x: "<<odometry.x<<" y: "<<odometry.y<<std::endl;
 
     // std::random_device rd;
     // std::mt19937 gen(rd());
-
-
-    ///// TODO: Threshold need to be tuned
-
-    if (del_s > 0.01 || (abs(del_theta) > 0.01) )
-    {   // for (int i_sample = 0; i_sample < 1000; ++i_sample){
-        // for (int i_dist = 0; i_dist < N_dist; ++i_dist)
-        // }
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return true;
 }
 
 particle_t ActionModel::applyAction(const particle_t& sample)
@@ -87,16 +80,18 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     std::normal_distribution<float> d1(0,sd1);
     std::normal_distribution<float> d2(0,sd2);
     std::normal_distribution<float> d3(0,sd3);
-    
+
     // sampled_val = d(gen);
     e1 = d1(gen);
     e2 = d2(gen);
     e3 = d3(gen);
-    
+    //std::cout<<sd1<<" "<<sd2<<" "<<sd3<<" "<<e1<<" "<<e2<<" "<<e3<<std::endl;
+
     new_sample.parent_pose = sample.pose;
     new_sample.pose.x = x1 + (del_s + e2) * cos(th1 + alpha + e1);
     new_sample.pose.y = y1 + (del_s + e2) * sin(th1 + alpha + e1);
     new_sample.pose.theta = wrap_to_pi(th1 + (del_theta + e1 + e3));
+    //new_sample.pose.theta = wrap_to_pi(th1 + (del_theta + e1 + e3));
     // new_sample.pose.utime = sample.pose.utime;
     // new_sample.weight = 0.0;
     // std::cout<<"action del s: "<<del_s<<" del theta: "<<del_theta<<std::endl;
@@ -104,6 +99,6 @@ particle_t ActionModel::applyAction(const particle_t& sample)
     // std::cout<<"sample x: "<<sample.pose.x<<" y: "<<sample.pose.y<<std::endl;
 
     // }
-
+    new_sample.pose.utime = last_pose_.utime;
     return new_sample;
 }

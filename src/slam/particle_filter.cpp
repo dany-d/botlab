@@ -18,16 +18,16 @@ ParticleFilter::ParticleFilter(int numParticles)
 void ParticleFilter::initializeFilterAtPose(const pose_xyt_t& pose)
 {
     for (int i_num = 0; i_num < kNumParticles_; i_num++){
-        posterior_[i_num].pose.x = rand()%5*0.0001+pose.x;
-        posterior_[i_num].pose.y = rand()%5*0.0001+pose.y;
-        posterior_[i_num].pose.theta = wrap_to_pi(rand()%10*0.0000154+pose.theta);
+        posterior_[i_num].pose.x = (rand()%5000-2500)*0.00002+pose.x;
+        posterior_[i_num].pose.y = (rand()%5000-2500)*0.00002+pose.y;
+        posterior_[i_num].pose.theta = wrap_to_pi((rand()%5000-2500)*0.0000154+pose.theta);
         posterior_[i_num].pose.utime = pose.utime;
         posterior_[i_num].parent_pose = pose;
         posterior_[i_num].weight = 1.0 /kNumParticles_;
     }
-    posteriorPose_ = estimatePosteriorPose(posterior_);
-    std::cout<<"pose x: "<<posteriorPose_.x<<" y: "<<posteriorPose_.y<<std::endl;
-    std::cout<<"Hit: "<<1<<" "<<std::endl;
+    //posteriorPose_ = estimatePosteriorPose(posterior_);
+    //std::cout<<"pose x: "<<posteriorPose_.x<<" y: "<<posteriorPose_.y<<std::endl;
+    //std::cout<<"Hit: "<<1<<" "<<std::endl;
     ///////////// TODO: Implement your method for initializing the particles in the particle filter /////////////////
 }
 
@@ -39,14 +39,14 @@ pose_xyt_t ParticleFilter::updateFilter(const pose_xyt_t&      odometry,
     // Only update the particles if motion was detected. If the robot didn't move, then
     // obviously don't do anything.
     bool hasRobotMoved = actionModel_.updateAction(odometry);
-    
+
     if(hasRobotMoved)
     {
         // std::cout<<"start!!!!"<<std::endl;
         auto prior = resamplePosteriorDistribution();
         // std::cout<<"prior x:"<<prior[50].pose.x<<" y:"<<prior[50].pose.y<<std::endl;
         // std::cout<<"prior x:"<<prior[150].pose.x<<" y:"<<prior[150].pose.y<<std::endl;
-        std::cout<<"prior time:"<<prior[150].pose.utime<<" prior parent time"<<prior[150].parent_pose.utime<<std::endl;
+        //std::cout<<"prior time:"<<prior[150].pose.utime<<" prior parent time"<<prior[150].parent_pose.utime<<std::endl;
         // std::cout<<"second"<<std::endl;
         auto proposal = computeProposalDistribution(prior);
         // std::cout<<"proposal x:"<<proposal[50].pose.x<<" y:"<<proposal[50].pose.y<<std::endl;
@@ -64,9 +64,9 @@ pose_xyt_t ParticleFilter::updateFilter(const pose_xyt_t&      odometry,
     // posteriorPose_.y += odometry.y;
     // posteriorPose_.theta += odometry.theta;
     posteriorPose_.utime = odometry.utime;
-    std::cout<<"pose x: "<<posteriorPose_.x<<" y: "<<posteriorPose_.y<<std::endl;
+    //std::cout<<"pose x: "<<posteriorPose_.x<<" y: "<<posteriorPose_.y<<std::endl;
     // std::cout<<"Hit: "<<2<<" "<<std::endl;
-    
+
     return posteriorPose_;
 }
 
@@ -91,7 +91,7 @@ particles_t ParticleFilter::particles(void) const
 std::vector<particle_t> ParticleFilter::resamplePosteriorDistribution(void)
 {
     //////////// TODO: Implement your algorithm for resampling from the posterior distribution ///////////////////
-    std::vector<particle_t> prior;   
+    std::vector<particle_t> prior;
     double r = rand()%1000/(1000.0 * kNumParticles_);
     // std::cout<<"random: "<<r<<std::endl;
     double c = posterior_[0].weight;
@@ -100,14 +100,16 @@ std::vector<particle_t> ParticleFilter::resamplePosteriorDistribution(void)
 
     for (int m = 0; m < kNumParticles_; m++)
     {
-        U = r + m / kNumParticles_;
+        U = r + 1.0 * m / kNumParticles_;
+        //cout<<U<<" "<<c<<endl;
         while (U > c)
         {
             i += 1;
             c += posterior_[i].weight;
         }
-        prior.push_back(posterior_[i]);     
+        prior.push_back(posterior_[i]);
         prior[m].pose.utime = posteriorPose_.utime;
+        //cout<<"prior: "<<m<<" "<<i<<" "<<prior[m].weight<<endl;
     }
     // std::cout<<"Hit: "<<5<<" "<<std::endl;
     return prior;
@@ -120,9 +122,10 @@ std::vector<particle_t> ParticleFilter::computeProposalDistribution(const std::v
     for (int i_num = 0; i_num < kNumParticles_; i_num++)
     {
         proposal.push_back(actionModel_.applyAction(prior[i_num]));
+        //cout<<proposal[i_num].pose.x<<" "<<proposal[i_num].pose.y<<proposal[i_num].pose.theta<<endl;
     }
     // std::cout<<"Hit: "<<6<<" "<<std::endl;
-       
+
     return proposal;
 }
 
@@ -131,23 +134,25 @@ std::vector<particle_t> ParticleFilter::computeNormalizedPosterior(const std::ve
                                                                    const lidar_t& laser,
                                                                    const OccupancyGrid&   map)
 {
-    /////////// TODO: Implement your algorithm for computing the normalized posterior distribution using the 
+    /////////// TODO: Implement your algorithm for computing the normalized posterior distribution using the
     ///////////       particles in the proposal distribution
-    std::vector<particle_t> posterior;
+    std::vector<particle_t> posterior = proposal;
     double alpha = 0.0;
     for (int i_num = 0; i_num < kNumParticles_; i_num++)
     {
-        posterior.push_back(proposal[i_num]);
+        //posterior.push_back(proposal[i_num]);
         posterior[i_num].weight = sensorModel_.likelihood(proposal[i_num], laser, map);
         alpha += posterior[i_num].weight;
-        // std::cout<<"likeli: "<<alpha<<std::endl;
+        //std::cout<<"likeli: "<<alpha<<std::endl;
     }
 
     for (int i_num = 0; i_num < kNumParticles_; i_num++)
     {
-        posterior[i_num].weight /= alpha;
+        posterior[i_num].weight /= alpha *1.0;
+        //cout<<posterior[i_num].weight<<" ";
     }
-    std::cout<<"likelihood: "<<alpha<<std::endl;
+    //cout<<endl;
+    //std::cout<<"likelihood: "<<alpha<<std::endl;
     // std::cout<<"Hit: "<<7<<" "<<std::endl;
     return posterior;
 }

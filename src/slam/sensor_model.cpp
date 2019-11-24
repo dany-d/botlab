@@ -31,6 +31,7 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
       int endLogOdd = map.logOdds(x1,y1);
       if (endLogOdd > obs_thres){
         likelihood += double((endLogOdd+127)/254);
+        //std::cout<<"hit likelihood: "<<likelihood<<std::endl;
       }
       else{
         int x2 = map.metersToCellX(ad_ray.origin.x + (range+map.metersPerCell()) *cos(theta));
@@ -39,6 +40,7 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
         int x3= map.metersToCellX(ad_ray.origin.x + (range-map.metersPerCell()) *cos(theta));
         int y3 = map.metersToCellY(ad_ray.origin.y + (range-map.metersPerCell()) *sin(theta));
         likelihood += f_*double((map.logOdds(x2,y2) +127 + map.logOdds(x3,y3)+127)/2/254);
+        //std::cout<<"Miss likelihood: "<<likelihood<<std::endl;
       }
     }
     return likelihood;
