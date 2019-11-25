@@ -67,15 +67,15 @@ public:
     {
         //////////// TODO: Implement your feedback controller here. //////////////////////
         
-        const float kPGain = 5.0f;
+        const float kPGain = 3.0f;
         const float kDGain = 0.0f;
         const float kIGain = 0.0003f;
 
         const float kPTurnGain = 1.5f;
         const float kDesiredSpeed = 0.2f;
         const float kMinSpeed = 0.1f;
-        const float kTurnSpeed = 2.0f;
-        const float kTurnMaxSpeed = 2.0f;
+        const float kTurnSpeed = 1.5f;
+        const float kTurnMaxSpeed = 1.5f;
         const float kDTurnGain = 0.005f;
         const float slowDownDistance = 0.4f;
         
@@ -112,7 +112,7 @@ public:
 
             if(state_ == TURN)
             {
-                if(std::abs(error) > 0.05) // turn in place until pointed approximately at the target
+                if(std::abs(error) > 0.15) // turn in place until pointed approximately at the target
                 {
 
                     cmd.trans_v = 0; //set translational velocity to 0
@@ -124,7 +124,7 @@ public:
                         turnspeed = -kTurnSpeed;
                     }
 
-                    if (std::abs(error) < 0.3) {
+                    if (std::abs(error) < 0.2) {
                         // kick in PID close to end
                         double deltaError = error - lastError_;
                         totalError_ += error;
@@ -132,7 +132,7 @@ public:
 
                         double sign=(error<0)?-1:1;
 
-                        turnspeed = (error * kPGain) + 0.5*sign; 
+                        turnspeed = (error * kPGain);  //+ 0.1*sign; 
                         // + (deltaError * kDGain) + (totalError_ * kIGain);
                         if (turnspeed >= 0) {
                             turnspeed = std::min(turnspeed, kTurnMaxSpeed);
