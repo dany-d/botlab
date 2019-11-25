@@ -2,13 +2,18 @@
 #include <planning/obstacle_distance_grid.hpp>
 
 
+
+
+
 robot_path_t search_for_path(pose_xyt_t start, 
                              pose_xyt_t goal, 
                              const ObstacleDistanceGrid& distances,
                              const SearchParams& params)
 {
     ////////////////// TODO: Implement your A* search here //////////////////////////
-    
+
+    distances.setDistances(map)
+
     robot_path_t path;
     path.utime = start.utime;
     path.path.push_back(start);    
