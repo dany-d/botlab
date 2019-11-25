@@ -10,8 +10,8 @@
 
 ActionModel::ActionModel(void)
 {
-    k1 = 1.2;
-    k2 = 0.3;
+    k1 = 1.15;
+    k2 = 0.25;
     // N_dist = 1000;
     // sd1 = 0;
     // sd2 = 0;
