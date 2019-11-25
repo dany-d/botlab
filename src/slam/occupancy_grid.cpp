@@ -45,6 +45,16 @@ void OccupancyGrid::setOrigin(float x, float y){
   //  cout << "set global origin to: " << x << ", " << y << "\n";
 }
 
+int OccupancyGrid::metersToCellX(float x) const
+{
+    return std::floor(x * cellsPerMeter_) + (width_ / 2);
+}
+
+int OccupancyGrid::metersToCellY(float x) const
+{
+    return std::floor(x * cellsPerMeter_) + (height_ / 2);
+}
+
 void OccupancyGrid::reset(void)
 {
 //    cout << "reset!\n";

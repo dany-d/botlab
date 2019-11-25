@@ -253,6 +253,7 @@ void OccupancyGridSLAM::updateLocalization(void)
         currentPose_  = filter_.updateFilter(currentOdometry_, currentScan_, map_);//, v_, omega_, utime_); //remove last 3 args for odo
         
         auto particles = filter_.particles();
+        // std::cout<<"current pose: "<<currentPose_.x<<", "<<currentPose_.y<<" "<<std::endl;
 
         lcm_.publish(SLAM_POSE_CHANNEL, &currentPose_);
         lcm_.publish(SLAM_PARTICLES_CHANNEL, &particles);

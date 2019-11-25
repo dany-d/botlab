@@ -18,37 +18,37 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 {
     //////////////// TODO: Implement your occupancy grid algorithm here ///////////////////////
 
-  // Intialization
-  // If there is no last pose, then we need to start at next timestamp
-  if(!started_){
-    last_pose_ = pose;
-    map.reset();
-    started_ = true;
-    return;
-  }
-  // last_pose_ = pose;
-  // Moving laser scan to interpolate current robot pose
-  MovingLaserScan ml_scan(scan, last_pose_, pose, rayStride_);
-  int new_logOdd = 0;
+	// Intialization
+	// If there is no last pose, then we need to start at next timestamp
+	if(!started_){
+		last_pose_ = pose;
+		map.reset();
+		started_ = true;
+		return;
+	}
+	// last_pose_ = pose;
+	// Moving laser scan to interpolate current robot pose
+	MovingLaserScan ml_scan(scan, last_pose_, pose, rayStride_);
+	int new_logOdd = 0;
 	// This algorith is supposed to update the log odds associated with each cell //
 
 	// Need to determine the cells through which the laser passes through for each ray of laser
 	// Creating for loop to iterate through each laser array
 	for (unsigned int i=0; i<ml_scan.size(); i++){
-    adjusted_ray_t ad_ray = ml_scan.at(i);
-  	// Current robot pose in world frame
-  	int x0 = map.metersToCellX(ad_ray.origin.x);
-  	int y0 = map.metersToCellY(ad_ray.origin.y);
+		adjusted_ray_t ad_ray = ml_scan.at(i);
+		// Current robot pose in world frame
+		int x0 = map.metersToCellX(ad_ray.origin.x);
+		int y0 = map.metersToCellY(ad_ray.origin.y);
 
-  	float range = ad_ray.range;
-  	float theta = ad_ray.theta; // This is the global frame theta!
-  	//cout<<i<<" "<<x0<<" "<<y0<<" "<<range<<" "<<theta<<endl;
-    if(range > kMaxLaserDistance_){
-         continue;
-      }
+		float range = ad_ray.range;
+		float theta = ad_ray.theta; // This is the global frame theta!
+			//cout<<i<<" "<<x0<<" "<<y0<<" "<<range<<" "<<theta<<endl;
+		if(range > kMaxLaserDistance_){
+		     continue;
+	  	}
 		// End of laser scan in world frame
-    int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
-   	int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
+		int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
+		int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
 		int dx = abs(x1-x0);
 		int dy = abs(y1-y0);
 		int sx = (x0<x1)? 1 : -1;
@@ -58,30 +58,30 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 		int y = y0;
 		while(x != x1 || y != y1){
 
-		  // Updating the odds for each cell through which laser array passes
+			// Updating the odds for each cell through which laser array passes
 			new_logOdd = map.logOdds(x,y)  - kMissOdds_;
-      new_logOdd = new_logOdd < -127 ? -127: new_logOdd;
+			new_logOdd = new_logOdd < -127 ? -127: new_logOdd;
 			map.setLogOdds(x,y, new_logOdd);
 
 			// Computing the next x,y cells through which laser passes using Breshenham's Algorithm
-	    int e2 = 2*err;
-	    if (e2 >= -dy)
-		    {
-				err -= dy;
-				x += sx;
-			}
+			int e2 = 2*err;
+			if (e2 >= -dy)
+			    {
+					err -= dy;
+					x += sx;
+				}
 
-	    if (e2 <= dx)
-		    {
-		    	err += dx;
-				y += sy;
-			}
-	 	}
-	 	new_logOdd = map.logOdds(x1,y1) +  kHitOdds_;
-	 	new_logOdd = new_logOdd > 127 ? 127: new_logOdd;
-    map.setLogOdds(x1,y1, new_logOdd);
-    //cout<<"Hit: "<<x<<" "<<y<<" "<< int(new_logOdd)<<endl;
+			if (e2 <= dx)
+			    {
+			    	err += dx;
+					y += sy;
+				}
+		}
+		new_logOdd = map.logOdds(x1,y1) +  kHitOdds_;
+		new_logOdd = new_logOdd > 127 ? 127: new_logOdd;
+		map.setLogOdds(x1,y1, new_logOdd);
+		//cout<<"Hit: "<<x<<" "<<y<<" "<< int(new_logOdd)<<endl;
 	}
-  //cout<< int(map.logOdds(124,123)) <<endl;
-  last_pose_ = pose;
+	//cout<< int(map.logOdds(124,123)) <<endl;
+	last_pose_ = pose;
 }

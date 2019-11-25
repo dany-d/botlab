@@ -7,10 +7,10 @@
 
 SensorModel::SensorModel(void)
 {
-    ///////// TODO: Tune this f_ and sensor_thres
-    f_ = 0.8;
-    rayStride_ = 1;
-    sensor_thres = 50;
+    ///////// TODO: Handle any initialization needed for your sensor model
+    f_ = 0.9;
+    rayStride_ = 4;
+    obs_thres = 0;
 }
 
 
@@ -18,7 +18,7 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
 {
     ///////////// TODO: Implement your sensor model for calculating the likelihood of a particle given a laser scan //////////
     MovingLaserScan ml_scan(scan, sample.parent_pose, sample.pose, rayStride_);
-    int likelihood = 0;
+    double likelihood = 0.0;
     for (unsigned int i=0; i<ml_scan.size(); i++){
       adjusted_ray_t ad_ray = ml_scan.at(i);
       float range = ad_ray.range;
@@ -29,9 +29,9 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
       int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
       int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
       int endLogOdd = map.logOdds(x1,y1);
-      
-      if (endLogOdd > sensor_thres){
-        likelihood += endLogOdd;
+      if (endLogOdd > obs_thres){
+        likelihood += double((endLogOdd+127)/254);
+        //std::cout<<"hit likelihood: "<<likelihood<<std::endl;
       }
       else{
         int x2 = map.metersToCellX(ad_ray.origin.x + (range+map.metersPerCell()) *cos(theta));
@@ -39,7 +39,8 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
 
         int x3= map.metersToCellX(ad_ray.origin.x + (range-map.metersPerCell()) *cos(theta));
         int y3 = map.metersToCellY(ad_ray.origin.y + (range-map.metersPerCell()) *sin(theta));
-        likelihood += f_*(map.logOdds(x2,y2) + map.logOdds(x3,y3));
+        likelihood += f_*double((map.logOdds(x2,y2) +127 + map.logOdds(x3,y3)+127)/2/254);
+        //std::cout<<"Miss likelihood: "<<likelihood<<std::endl;
       }
     }
     return likelihood;
