@@ -9,8 +9,8 @@ SensorModel::SensorModel(void)
 {
     ///////// TODO: Handle any initialization needed for your sensor model
     f_ = 0.9;
-    rayStride_ = 4;
-    obs_thres = 0;
+    rayStride_ = 7;
+    obs_thres = 50;
 }
 
 
@@ -34,12 +34,16 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
         //std::cout<<"hit likelihood: "<<likelihood<<std::endl;
       }
       else{
-        int x2 = map.metersToCellX(ad_ray.origin.x + (range+map.metersPerCell()) *cos(theta));
-        int y2 = map.metersToCellY(ad_ray.origin.y + (range+map.metersPerCell()) *sin(theta));
+        int x2 = x1 + floor(1.8*cos(theta));
+        int y2 = y1 + floor(1.8*sin(theta));
 
-        int x3= map.metersToCellX(ad_ray.origin.x + (range-map.metersPerCell()) *cos(theta));
-        int y3 = map.metersToCellY(ad_ray.origin.y + (range-map.metersPerCell()) *sin(theta));
+        int x3 = x1 - floor(1.8*cos(theta));
+        int y3 = y1 - floor(1.8*sin(theta));
+
         likelihood += f_*double((map.logOdds(x2,y2) +127 + map.logOdds(x3,y3)+127)/2/254);
+        // std::cout<<"x1: "<<x1<<" y1: "<<y1<<std::endl;
+        // std::cout<<"x2: "<<x2<<" y2: "<<y2<<std::endl;
+        // std::cout<<"x3: "<<x3<<" y3: "<<y3<<std::endl;
         //std::cout<<"Miss likelihood: "<<likelihood<<std::endl;
       }
     }
