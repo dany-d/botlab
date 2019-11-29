@@ -15,7 +15,142 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
 {
     resetGrid(map);
     
-    ///////////// TODO: Implement an algorithm to mark the distance to the nearest obstacle for every cell in the map.
+    for(int y = 0; y < map.heightInCells(); ++y)
+    {
+        for(int x = 0; x < map.widthInCells(); ++x)
+        {
+            if(map(x, y) > 0)
+            {
+                cells_[cellIndex(x, y)] = 0.0f;
+                
+            }
+            if(map(x, y) == 0)
+            {
+                cells_[cellIndex(x, y)] = 0.0f;
+            }
+            if(map(x, y) < 0)
+            {
+                int dis = map.widthInCells()*map.widthInCells() + map.heightInCells() * map.heightInCells();
+                for(int x_m = 1; x - x_m > 0; x_m++)
+                {
+                    for(int y_p = 1; y + y_p < map.heightInCells(); y_p++)
+                    {
+                        if(map(x - x_m, y + y_p) > 0)
+                        {
+                            if(dis > x_m*x_m + y_p*y_p)
+                            {
+                                dis = x_m*x_m + y_p*y_p;
+                            }
+                            break;
+                        }
+                    }
+                    for(int y_m = 1; y - y_m > 0; y_m++)
+                    {
+                        if(map(x - x_m, y - y_m) > 0)
+                        {
+                            if(dis > x_m*x_m + y_m*y_m)
+                            {
+                                dis = x_m*x_m + y_m*y_m;
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                for(int x_p = 1; x + x_p < map.widthInCells(); x_p++)
+                {
+                    for(int y_p = 1; y + y_p < map.heightInCells(); y_p++)
+                    {
+                        if(map(x + x_p, y + y_p) > 0)
+                        {
+                            if(dis > x_p*x_p + y_p*y_p)
+                            {
+                                dis = x_p*x_p + y_p*y_p;
+                            }
+                            break;
+                        }
+                    }
+                    for(int y_m = 1; y - y_m > 0; y_m++)
+                    {
+                        if(map(x + x_p, y - y_m) > 0)
+                        {
+                            if(dis > x_p*x_p + y_m*y_m)
+                            {
+                                dis = x_p*x_p + y_m*y_m;
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                for(int y_p = 1; y + y_p < map.heightInCells(); y_p++)
+                {
+                    if(map(x, y + y_p) > 0)
+                    {
+                        if(dis > y_p*y_p)
+                            {
+                                dis = y_p*y_p;
+                            }
+                        break;
+                    }
+                }
+                for(int y_m = 1; y - y_m > 0; y_m++)
+                {
+                    if(map(x, y - y_m) > 0)
+                    {
+                        if(dis > y_m*y_m)
+                            {
+                                dis = y_m*y_m;
+                            }
+                        break;
+                    }
+                }
+                for(int x_p = 1; x + x_p < map.widthInCells(); x_p++)
+                {
+                    if(map(x + x_p, y) > 0)
+                    {
+                        if(dis > x_p*x_p)
+                            {
+                                dis = x_p*x_p;
+                            }
+                        break;
+                    }
+                }
+                for(int x_m = 1; x - x_m > 0; x_m++)
+                {
+                    if(map(x - x_m, y) > 0)
+                    {
+                        if(dis > x_m*x_m)
+                            {
+                                dis = x_m*x_m;
+                            }
+                        break;
+                    }
+                }
+                cells_[cellIndex(x, y)] = sqrt(dis)*map.metersPerCell();
+            }
+        }
+    }
+}
+
+int ObstacleDistanceGrid::metersToCellX(float x) const
+{
+    return std::floor(x * cellsPerMeter_) + (width_ / 2);
+}
+
+int ObstacleDistanceGrid::metersToCellY(float x) const
+{
+    return std::floor(x * cellsPerMeter_) + (height_ / 2);
+}
+
+float ObstacleDistanceGrid::cellsToMeterX(int x) const
+{
+    return (x - (width_ / 2)) * metersPerCell_;
+}
+
+float ObstacleDistanceGrid::cellsToMeterY(int x) const
+{
+    return (x - (height_ / 2)) * metersPerCell_;
 }
 
 

@@ -3,6 +3,8 @@
 
 #include <lcmtypes/robot_path_t.hpp>
 #include <lcmtypes/pose_xyt_t.hpp>
+#include <stack>
+#include <vector>
 
 class ObstacleDistanceGrid;
 

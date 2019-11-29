@@ -55,6 +55,16 @@ int OccupancyGrid::metersToCellY(float x) const
     return std::floor(x * cellsPerMeter_) + (height_ / 2);
 }
 
+float OccupancyGrid::cellsToMeterX(int x) const
+{
+    return (x - (width_ / 2)) * metersPerCell_;
+}
+
+float OccupancyGrid::cellsToMeterY(int x) const
+{
+    return (x - (height_ / 2)) * metersPerCell_;
+}
+
 void OccupancyGrid::reset(void)
 {
 //    cout << "reset!\n";
