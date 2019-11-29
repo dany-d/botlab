@@ -157,8 +157,12 @@ robot_path_t search_for_path(pose_xyt_t start,
                     }
                     else if (closedList[x + newX][y + newY] == false)
                     {
-                        gNew = node.gCost + 1.0;
+                    	gNew = node.gCost + 1.0;
                         hNew = sqrt((x + newX - goal.x)*(x + newX - goal.x) + (y + newY - goal.y)*(y + newY - goal.y));
+                        if ((distances(x + newX, y + newY) > params.minDistanceToObstacle)&&(distances(x + newX, y + newY) < params.maxDistanceWithCost))
+                        {
+                        	hNew += pow(params.maxDistanceWithCost - distances(x + newX, y + newY), params.distanceCostExponent);
+                        }
                         fNew = gNew + hNew;
                         // Check if this path is better than the one already present
                         if (allMap[id].fCost == FLT_MAX || allMap[id].fCost > fNew)
