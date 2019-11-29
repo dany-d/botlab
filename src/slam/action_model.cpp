@@ -12,6 +12,7 @@ ActionModel::ActionModel(void)
 {
     k1 = 1.15;
     k2 = 0.25;
+    k3 = 1.3;
     // N_dist = 1000;
     // sd1 = 0;
     // sd2 = 0;
@@ -52,7 +53,7 @@ bool ActionModel::updateAction(const pose_xyt_t& odometry)
     // creating distribution
     sd1 = k1 * fabs(alpha);
     sd2 = k2 * fabs(del_s);
-    sd3 = k1 * fabs(del_theta - alpha);
+    sd3 = k3 * fabs(del_theta - alpha);
     last_pose_ = odometry;
     // std::cout<<"odometry x: "<<odometry.x<<" y: "<<odometry.y<<std::endl;
 

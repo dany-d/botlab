@@ -122,11 +122,6 @@ public:
     */
     CellOdds logOdds(int x, int y) const;
     
-    int metersToCellX(float x) const;
-    int metersToCellY(float x) const;
-
-    float cellsToMeterX(int x) const;
-    float cellsToMeterY(int x) const;
     /**
     * setLogOdds sets the log-odds of occupancy for the specified cell if the cell falls within the grid boundary. If the
     * cell doesn't fall within the boundary, then nothing happens.

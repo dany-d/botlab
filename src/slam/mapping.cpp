@@ -37,8 +37,9 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 	for (unsigned int i=0; i<ml_scan.size(); i++){
 		adjusted_ray_t ad_ray = ml_scan.at(i);
 		// Current robot pose in world frame
-		int x0 = map.metersToCellX(ad_ray.origin.x);
-		int y0 = map.metersToCellY(ad_ray.origin.y);
+		auto Cell0 = global_position_to_grid_cell(Point<float>(ad_ray.origin.x, ad_ray.origin.y), map);
+		int x0 = Cell0.x;
+		int y0 = Cell0.y;
 
 		float range = ad_ray.range;
 		float theta = ad_ray.theta; // This is the global frame theta!
@@ -47,8 +48,9 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 		     continue;
 	  	}
 		// End of laser scan in world frame
-		int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
-		int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
+		auto Cell1 = global_position_to_grid_cell(Point<float>(ad_ray.origin.x + range*cos(theta), ad_ray.origin.y + range*sin(theta)), map);
+		int x1 = Cell1.x;
+		int y1 = Cell1.y;
 		int dx = abs(x1-x0);
 		int dy = abs(y1-y0);
 		int sx = (x0<x1)? 1 : -1;

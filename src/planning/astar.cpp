@@ -2,6 +2,7 @@
 #include <planning/obstacle_distance_grid.hpp>
 #include <common/angle_functions.hpp>
 #include <cfloat>
+#include <common/grid_utils.hpp>
 using namespace std;
 
 struct Node
@@ -26,16 +27,16 @@ static bool isValid(int x, int y, const ObstacleDistanceGrid& distances) { //If 
         return false;
 }
 
-static bool isDestination(int x, int y, int goal_x, int goal_y) {
-        if (x == goal_x && y == goal_y) {
+static bool isDestination(int x, int y, Point<int>& goalCell) {
+        if (x == goalCell.x && y == goalCell.y) {
             return true;
         }
         return false;
 }
 
-static vector<Node> makePath(std::vector<Node>& map, int goal_x, int goal_y, const ObstacleDistanceGrid& distances) {
-    int x = goal_x;
-    int y = goal_y;
+static vector<Node> makePath(std::vector<Node>& map, Point<int>& goalCell, const ObstacleDistanceGrid& distances) {
+    int x = goalCell.x;
+    int y = goalCell.y;
     std::stack<Node> path;
     std::vector<Node> usablePath;
     int id = y*distances.widthInCells() + x;
@@ -69,8 +70,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     path.utime = start.utime;
     path.path.push_back(start);  
 
-    int goal_x = distances.metersToCellX(goal.x);
-    int goal_y = distances.metersToCellY(goal.y);
+    auto goalCell = global_position_to_grid_cell(Point<float>(goal.x, goal.y), distances);
 
     bool closedList[distances.widthInCells()][distances.heightInCells()];
 
@@ -95,8 +95,9 @@ robot_path_t search_for_path(pose_xyt_t start,
     }
 
     //Initialize our starting list
-    int x = distances.metersToCellX(start.x);
-    int y = distances.metersToCellY(start.y);
+    auto startCell = global_position_to_grid_cell(Point<float>(start.x, start.y), distances);
+    int x = startCell.x;
+    int y = startCell.y;
     int id = y*distances.widthInCells() + x;
     allMap[id].fCost = 0.0;
     allMap[id].gCost = 0.0;
@@ -138,15 +139,16 @@ robot_path_t search_for_path(pose_xyt_t start,
                 double gNew, hNew, fNew;
                 int id = (y + newY)*distances.widthInCells() + x + newX;
                 if (isValid(x + newX, y + newY, distances)) {
-                    if (isDestination(x + newX, y + newY, goal_x, goal_y))
+                    if (isDestination(x + newX, y + newY, goalCell))
                     {
                         //Destination found - make path
                         allMap[id].parentX = x;
                         allMap[id].parentY = y;
-                        usablePath = makePath(allMap, goal_x, goal_y, distances);
+                        usablePath = makePath(allMap, goalCell, distances);
                         for (unsigned int i = 0; i < usablePath.size();i++){
-                        	pose_temp.x = distances.cellsToMeterX(usablePath[i].x);
-                        	pose_temp.y = distances.cellsToMeterY(usablePath[i].y);
+                        	auto globalpos = grid_position_to_global_position(Point<float>(usablePath[i].x, usablePath[i].y), distances);
+                        	pose_temp.x = globalpos.x;
+                        	pose_temp.y = globalpos.y;
                         	pose_temp.theta = wrap_to_pi(atan2(usablePath[i].y - usablePath[i].parentY, usablePath[i].x - usablePath[i].parentX));
                         	std::cout<<"path: "<<pose_temp.x<<" "<<pose_temp.y<<" "<<" "<<pose_temp.theta<<std::endl;
                         	path.path.push_back(pose_temp);

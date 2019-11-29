@@ -26,8 +26,9 @@ double SensorModel::likelihood(const particle_t& sample, const lidar_t& scan, co
       //cout<<i<<" "<<x0<<" "<<y0<<" "<<range<<" "<<theta<<endl;
 
       // End of laser scan in world frame
-      int x1 = map.metersToCellX(ad_ray.origin.x + range*cos(theta));
-      int y1 = map.metersToCellY(ad_ray.origin.y + range*sin(theta));
+      auto Cell1 = global_position_to_grid_cell(Point<float>(ad_ray.origin.x + range*cos(theta), ad_ray.origin.y + range*sin(theta)), map);
+      int x1 = Cell1.x;
+      int y1 = Cell1.y;
       int endLogOdd = map.logOdds(x1,y1);
       if (endLogOdd > obs_thres){
         likelihood += double((endLogOdd+127)/254);

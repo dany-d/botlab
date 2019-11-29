@@ -36,12 +36,6 @@ public:
     
     float metersPerCell(void) const { return metersPerCell_; }
     float cellsPerMeter(void) const { return cellsPerMeter_; }
-
-    int metersToCellX(float x) const;
-    int metersToCellY(float x) const;
-
-    float cellsToMeterX(int x) const;
-    float cellsToMeterY(int x) const;
     
     Point<float> originInGlobalFrame(void) const { return globalOrigin_; }
     

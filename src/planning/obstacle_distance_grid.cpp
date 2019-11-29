@@ -133,27 +133,6 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
     }
 }
 
-int ObstacleDistanceGrid::metersToCellX(float x) const
-{
-    return std::floor(x * cellsPerMeter_) + (width_ / 2);
-}
-
-int ObstacleDistanceGrid::metersToCellY(float x) const
-{
-    return std::floor(x * cellsPerMeter_) + (height_ / 2);
-}
-
-float ObstacleDistanceGrid::cellsToMeterX(int x) const
-{
-    return (x - (width_ / 2)) * metersPerCell_;
-}
-
-float ObstacleDistanceGrid::cellsToMeterY(int x) const
-{
-    return (x - (height_ / 2)) * metersPerCell_;
-}
-
-
 bool ObstacleDistanceGrid::isCellInGrid(int x, int y) const
 {
     return (x >= 0) && (x < width_) && (y >= 0) && (y < height_);
