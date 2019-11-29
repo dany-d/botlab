@@ -170,6 +170,8 @@ bool test_saved_poses(const std::string& mapFile, const std::string& posesFile, 
     for(int n = 0; n < numGoals; ++n)
     {
         poseIn >> start.x >> start.y >> goal.x >> goal.y >> shouldExist;
+
+        std::cout<<"start x: "<<start.x<<" y: "<< start.y<<" goal x: "<<goal.x<<" y: "<<goal.y<<std::endl;
         
         robot_path_t path = timed_find_path(start, goal, planner, testName);
         

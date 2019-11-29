@@ -17,8 +17,8 @@ struct Node
 };
 
 static bool isValid(int x, int y, const ObstacleDistanceGrid& distances) { //If our Node is an obstacle it is not valid
-		if (distances(x,y) != 0.0f) {
-        	if (!distances.isCellInGrid(x, y))
+		if (distances.isCellInGrid(x, y)){
+        	if (distances(x,y) == 0.0f)
         	{
         		return false;
         	}
@@ -72,6 +72,12 @@ robot_path_t search_for_path(pose_xyt_t start,
 
     auto goalCell = global_position_to_grid_cell(Point<float>(goal.x, goal.y), distances);
 
+    if (isValid(goalCell.x, goalCell.y, distances)==false) 
+    {
+		path.path_length = path.path.size();
+		return path;
+	}
+
     bool closedList[distances.widthInCells()][distances.heightInCells()];
 
     unsigned int grid_size = distances.heightInCells()*distances.widthInCells();
@@ -105,8 +111,16 @@ robot_path_t search_for_path(pose_xyt_t start,
     allMap[id].parentX = x;
     allMap[id].parentY = y;
 
+    if (isValid(startCell.x, startCell.y, distances)==false) 
+    {
+		path.path_length = path.path.size();
+		return path;
+	}
+
     std::vector<Node> openList;  
     openList.emplace_back(allMap[id]);
+    bool destinationFound = false;
+    // std::cout<<"grid size"<<grid_size<<std::endl;
 
     while (!openList.empty()&&openList.size()<grid_size) 
     {
@@ -132,13 +146,13 @@ robot_path_t search_for_path(pose_xyt_t start,
         closedList[x][y] = true;
         std::vector<Node> usablePath;
         pose_xyt_t pose_temp;
-
+        
         //For each neighbour starting from North-West to South-East
         for (int newX = -1; newX <= 1; newX++) {
             for (int newY = -1; newY <= 1; newY++) {
                 double gNew, hNew, fNew;
-                int id = (y + newY)*distances.widthInCells() + x + newX;
                 if (isValid(x + newX, y + newY, distances)) {
+                	int id = (y + newY)*distances.widthInCells() + x + newX;
                     if (isDestination(x + newX, y + newY, goalCell))
                     {
                         //Destination found - make path
@@ -150,11 +164,12 @@ robot_path_t search_for_path(pose_xyt_t start,
                         	pose_temp.x = globalpos.x;
                         	pose_temp.y = globalpos.y;
                         	pose_temp.theta = wrap_to_pi(atan2(usablePath[i].y - usablePath[i].parentY, usablePath[i].x - usablePath[i].parentX));
-                        	std::cout<<"path: "<<pose_temp.x<<" "<<pose_temp.y<<" "<<" "<<pose_temp.theta<<std::endl;
+                        	// std::cout<<"path: "<<pose_temp.x<<" "<<pose_temp.y<<" "<<" "<<pose_temp.theta<<std::endl;
                         	path.path.push_back(pose_temp);
                         }
                         path.path.push_back(goal);
     					path.path_length = path.path.size();
+    					destinationFound = true;
     					return path;
                     }
                     else if (closedList[x + newX][y + newY] == false)
@@ -182,6 +197,10 @@ robot_path_t search_for_path(pose_xyt_t start,
             }
         }
     }
-    path.path_length = path.path.size();
+    if (destinationFound == false) 
+    {
+    cout << "Destination not found" << endl;
+	}
+	path.path_length = path.path.size();
 	return path;
 }
