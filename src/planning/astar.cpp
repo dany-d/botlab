@@ -7,16 +7,6 @@
 #include <unordered_set>
 #include <queue>
 
-// class Node
-// {
-// public:
-//     Point<int> n;
-//     mutable const Node *p;
-//     mutable float f_score;
-//     mutable float g_score;
-
-//     Node(Point<int> n, const Node *p, float g_score) : n(Point<int>(n.x, n.y)), p(p), f_score(std::numeric_limits<float>::infinity()), g_score(g_score){};
-// };
 
 double obs_cost(const SearchParams &params,double obsDistance)
 {
@@ -33,25 +23,13 @@ double obs_cost(const SearchParams &params,double obsDistance)
 }
 
 
-// bool isVisited(std::vector<Node> closed_list,Node particle){
-//     for(int i=0; i < closed_list.size(); ++i){
-//         if (closed_list[i].pose.x == particle.pose.x && closed_list[i].pose.y == particle.pose.y)
-//         {
-//             return true;
-//         }
-//         else{
-//             return false;
-//         }
-//     }
+// bool isGoal(Node *currentNode, Node *goal)
+// {
+//     if (currentNode == goal)
+//         return (true);
+//     else
+//         return (false);
 // }
-
-bool isGoal(Node *currentNode, Node *goal)
-{
-    if (currentNode == goal)
-        return (true);
-    else
-        return (false);
-}
 
 double dist(Node *currentNode, Node *goal)
 {
@@ -69,11 +47,11 @@ bool isValid(Node *currentNode, const SearchParams &params, const ObstacleDistan
     else return false;
 }
 
-double neighbor_gcost(int newX,int newY,double step){
+double cost_to_go(int newX,int newY,double step){
     if (abs(newX) == 1&& abs(newY ==1)){
         return step;
     }
-    else return (1.41*step);
+    else return (1.414*step);
 }
 
 robot_path_t construct_path(Node *currentNode, robot_path_t path)
@@ -122,7 +100,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     pq.push(&start_node);
     open_set.insert(&start_node);
 
-    double step = 5;
+    double step = 0.05;
 
     while (open_list.size() > 0)
     {
@@ -154,7 +132,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                 // check for valid neighbors (obstacle and valid cell) 
                 if (isValid(&neighbor, params, distances))
                 {
-                    temp_g_cost = currentNode->g_cost + neighbor_gcost(newX, newY, step);
+                    temp_g_cost = currentNode->g_cost + cost_to_go(newX, newY, step);
                     if (temp_g_cost < neighbor.g_cost)
                     {
                         neighbor.p = currentNode;
