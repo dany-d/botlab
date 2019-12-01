@@ -3,8 +3,61 @@
 
 #include <lcmtypes/robot_path_t.hpp>
 #include <lcmtypes/pose_xyt_t.hpp>
+#include <common/point.hpp>
+
+#include <limits>
 
 class ObstacleDistanceGrid;
+
+
+class Node
+{
+public:
+    Point<int> n;
+    mutable Node *p;  
+    mutable float f_cost;
+    mutable float g_cost;
+
+    Node(Point<int> n, Node *p, float g_cost) : n(Point<int>(n.x, n.y)), p(p), f_cost(std::numeric_limits<float>::infinity()), g_cost(g_cost){};
+};
+
+inline bool operator==(const Node &lhs, const Node &rhs)
+{
+    return (lhs.n.x == rhs.n.x) && (lhs.n.y == rhs.n.y);
+}
+
+inline bool operator<(const Node &lhs, const Node &rhs)
+{
+    // Go from bottom left to top right
+    return lhs.f_cost < rhs.f_cost;
+}
+
+struct Compare
+{
+    inline bool operator()(const Node *lhs, const Node *rhs) const
+    {
+        return lhs->f_cost > rhs->f_cost;
+    }
+};
+
+struct equal
+{
+    inline bool operator()(Node *const lhs, Node *const rhs) const
+    {
+        return lhs->n.x == rhs->n.x && lhs->n.y == rhs->n.y;
+    }
+};
+
+struct hash
+{
+    size_t operator()(Node *const x) const
+    {
+        return (
+            (51 + std::hash<int>()(x->n.x)) * 51 + std::hash<int>()(x->n.y));
+    }
+};
+
+
 
 /**
 * SearchParams defines the parameters to use when searching for a path. See associated comments for details
