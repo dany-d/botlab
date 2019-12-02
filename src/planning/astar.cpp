@@ -16,9 +16,9 @@ struct Node
     float fCost;
 };
 
-static bool isValid(int x, int y, const ObstacleDistanceGrid& distances) { //If our Node is an obstacle it is not valid
+static bool isValid(int x, int y, const ObstacleDistanceGrid& distances, const SearchParams& params) { //If our Node is an obstacle it is not valid
 	if (distances.isCellInGrid(x, y)){
-    	if (distances(x,y) == 0.0f)
+    	if (distances(x,y) < params.minDistanceToObstacle)
     	{
     		return false;
     	}
@@ -72,7 +72,7 @@ robot_path_t search_for_path(pose_xyt_t start,
 
     auto goalCell = global_position_to_grid_cell(Point<float>(goal.x, goal.y), distances);
 
-    if (isValid(goalCell.x, goalCell.y, distances)==false) 
+    if (isValid(goalCell.x, goalCell.y, distances, params)==false) 
     {
 		path.path_length = path.path.size();
 		return path;
@@ -111,7 +111,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     allMap[id].parentX = x;
     allMap[id].parentY = y;
 
-    if (isValid(startCell.x, startCell.y, distances)==false) 
+    if (isValid(startCell.x, startCell.y, distances, params)==false) 
     {
 		path.path_length = path.path.size();
 		return path;
@@ -139,7 +139,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             }
             node = openList[itNodeID];
             openList.erase(openList.begin()+itNodeID);
-        } while (isValid(node.x, node.y, distances) == false);
+        } while (isValid(node.x, node.y, distances, params) == false);
 
         x = node.x;
         y = node.y;
@@ -151,7 +151,7 @@ robot_path_t search_for_path(pose_xyt_t start,
         for (int newX = -1; newX <= 1; newX++) {
             for (int newY = -1; newY <= 1; newY++) {
                 double gNew, hNew, fNew;
-                if (isValid(x + newX, y + newY, distances)) {
+                if (isValid(x + newX, y + newY, distances, params)) {
                 	int id = (y + newY)*distances.widthInCells() + x + newX;
                     if (isDestination(x + newX, y + newY, goalCell))
                     {
@@ -185,7 +185,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                         hNew = sqrt((x + newX - goal.x)*(x + newX - goal.x) + (y + newY - goal.y)*(y + newY - goal.y));
                         if ((distances(x + newX, y + newY) > params.minDistanceToObstacle)&&(distances(x + newX, y + newY) < params.maxDistanceWithCost))
                         {
-                        	// hNew +=  pow(distances.cellsPerMeter() *(params.maxDistanceWithCost - distances(x + newX, y + newY)), 10*params.distanceCostExponent);
+                        	hNew +=  1.6*pow(distances.cellsPerMeter() *(params.maxDistanceWithCost - distances(x + newX, y + newY)), params.distanceCostExponent);
                         }
                         fNew = gNew + hNew;
                         // Check if this path is better than the one already present
