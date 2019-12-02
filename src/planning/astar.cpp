@@ -17,21 +17,21 @@ struct Node
 };
 
 static bool isValid(int x, int y, const ObstacleDistanceGrid& distances) { //If our Node is an obstacle it is not valid
-		if (distances.isCellInGrid(x, y)){
-        	if (distances(x,y) == 0.0f)
-        	{
-        		return false;
-        	}
-        	return true;
-        }
-        return false;
+	if (distances.isCellInGrid(x, y)){
+    	if (distances(x,y) == 0.0f)
+    	{
+    		return false;
+    	}
+    	return true;
+    }
+    return false;
 }
 
 static bool isDestination(int x, int y, Point<int>& goalCell) {
-        if (x == goalCell.x && y == goalCell.y) {
-            return true;
-        }
-        return false;
+    if (x == goalCell.x && y == goalCell.y) {
+        return true;
+    }
+    return false;
 }
 
 static vector<Node> makePath(std::vector<Node>& map, Point<int>& goalCell, const ObstacleDistanceGrid& distances) {
@@ -172,13 +172,20 @@ robot_path_t search_for_path(pose_xyt_t start,
     					destinationFound = true;
     					return path;
                     }
+                    // else if (!(abs(newX)==abs(newY))&&(closedList[x + newX][y + newY] == false))
                     else if (closedList[x + newX][y + newY] == false)
                     {
-                    	gNew = node.gCost + 1.0;
+                    	if (!(abs(newX)==abs(newY))){
+                    		gNew = node.gCost + 1.0;
+                    	}
+                    	else {
+                    		gNew = node.gCost + 1.4;
+                    	}
+                    	
                         hNew = sqrt((x + newX - goal.x)*(x + newX - goal.x) + (y + newY - goal.y)*(y + newY - goal.y));
                         if ((distances(x + newX, y + newY) > params.minDistanceToObstacle)&&(distances(x + newX, y + newY) < params.maxDistanceWithCost))
                         {
-                        	hNew += pow(params.maxDistanceWithCost - distances(x + newX, y + newY), params.distanceCostExponent);
+                        	// hNew +=  pow(distances.cellsPerMeter() *(params.maxDistanceWithCost - distances(x + newX, y + newY)), 10*params.distanceCostExponent);
                         }
                         fNew = gNew + hNew;
                         // Check if this path is better than the one already present

@@ -35,7 +35,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 {
                     for(int y_p = 1; y + y_p < map.heightInCells(); y_p++)
                     {
-                        if(map(x - x_m, y + y_p) > 0)
+                        if(map(x - x_m, y + y_p) > 20)
                         {
                             if(dis > x_m*x_m + y_p*y_p)
                             {
@@ -46,7 +46,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                     }
                     for(int y_m = 1; y - y_m > 0; y_m++)
                     {
-                        if(map(x - x_m, y - y_m) > 0)
+                        if(map(x - x_m, y - y_m) > 20)
                         {
                             if(dis > x_m*x_m + y_m*y_m)
                             {
@@ -61,7 +61,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 {
                     for(int y_p = 1; y + y_p < map.heightInCells(); y_p++)
                     {
-                        if(map(x + x_p, y + y_p) > 0)
+                        if(map(x + x_p, y + y_p) > 20)
                         {
                             if(dis > x_p*x_p + y_p*y_p)
                             {
@@ -72,7 +72,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                     }
                     for(int y_m = 1; y - y_m > 0; y_m++)
                     {
-                        if(map(x + x_p, y - y_m) > 0)
+                        if(map(x + x_p, y - y_m) > 20)
                         {
                             if(dis > x_p*x_p + y_m*y_m)
                             {
@@ -85,7 +85,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 }
                 for(int y_p = 1; y + y_p < map.heightInCells(); y_p++)
                 {
-                    if(map(x, y + y_p) > 0)
+                    if(map(x, y + y_p) > 20)
                     {
                         if(dis > y_p*y_p)
                             {
@@ -96,7 +96,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 }
                 for(int y_m = 1; y - y_m > 0; y_m++)
                 {
-                    if(map(x, y - y_m) > 0)
+                    if(map(x, y - y_m) > 20)
                     {
                         if(dis > y_m*y_m)
                             {
@@ -107,7 +107,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 }
                 for(int x_p = 1; x + x_p < map.widthInCells(); x_p++)
                 {
-                    if(map(x + x_p, y) > 0)
+                    if(map(x + x_p, y) > 20)
                     {
                         if(dis > x_p*x_p)
                             {
@@ -118,7 +118,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 }
                 for(int x_m = 1; x - x_m > 0; x_m++)
                 {
-                    if(map(x - x_m, y) > 0)
+                    if(map(x - x_m, y) > 20)
                     {
                         if(dis > x_m*x_m)
                             {
