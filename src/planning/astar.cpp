@@ -185,7 +185,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                         hNew = sqrt((x + newX - goal.x)*(x + newX - goal.x) + (y + newY - goal.y)*(y + newY - goal.y));
                         if ((distances(x + newX, y + newY) > params.minDistanceToObstacle)&&(distances(x + newX, y + newY) < params.maxDistanceWithCost))
                         {
-                        	hNew +=  1.6*pow(distances.cellsPerMeter() *(params.maxDistanceWithCost - distances(x + newX, y + newY)), params.distanceCostExponent);
+                        	hNew +=  0.5*pow(distances.cellsPerMeter() *(params.maxDistanceWithCost - distances(x + newX, y + newY)), params.distanceCostExponent);
                         }
                         fNew = gNew + hNew;
                         // Check if this path is better than the one already present
