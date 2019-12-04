@@ -159,13 +159,16 @@ robot_path_t search_for_path(pose_xyt_t start,
                         allMap[id].parentX = x;
                         allMap[id].parentY = y;
                         usablePath = makePath(allMap, goalCell, distances);
-                        for (unsigned int i = 0; i < usablePath.size();i+=3){
+                        for (unsigned int i = 1; i < usablePath.size();i++){
                         	auto globalpos = grid_position_to_global_position(Point<float>(usablePath[i].x, usablePath[i].y), distances);
                         	pose_temp.x = globalpos.x;
                         	pose_temp.y = globalpos.y;
+                        	theta_prev = wrap_to_pi(atan2(usablePath[i-1].y - usablePath[i-1].parentY, usablePath[i-1].x - usablePath[i-1].parentX));
                         	pose_temp.theta = wrap_to_pi(atan2(usablePath[i].y - usablePath[i].parentY, usablePath[i].x - usablePath[i].parentX));
                         	// std::cout<<"path: "<<pose_temp.x<<" "<<pose_temp.y<<" "<<" "<<pose_temp.theta<<std::endl;
-                        	path.path.push_back(pose_temp);
+                        	if(fasb(theta_prev-pose_temp.theta)>0.1){
+                        		path.path.push_back(pose_temp);
+                        	}                        	
                         }
                         path.path.push_back(goal);
     					path.path_length = path.path.size();
