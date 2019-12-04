@@ -146,6 +146,7 @@ robot_path_t search_for_path(pose_xyt_t start,
         closedList[x][y] = true;
         std::vector<Node> usablePath;
         pose_xyt_t pose_temp;
+        float theta_prev;
         
         //For each neighbour starting from North-West to South-East
         for (int newX = -1; newX <= 1; newX++) {
@@ -166,7 +167,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                         	theta_prev = wrap_to_pi(atan2(usablePath[i-1].y - usablePath[i-1].parentY, usablePath[i-1].x - usablePath[i-1].parentX));
                         	pose_temp.theta = wrap_to_pi(atan2(usablePath[i].y - usablePath[i].parentY, usablePath[i].x - usablePath[i].parentX));
                         	// std::cout<<"path: "<<pose_temp.x<<" "<<pose_temp.y<<" "<<" "<<pose_temp.theta<<std::endl;
-                        	if(fasb(theta_prev-pose_temp.theta)>0.1){
+                        	if(fabs(theta_prev-pose_temp.theta)>0.1){
                         		path.path.push_back(pose_temp);
                         	}                        	
                         }
