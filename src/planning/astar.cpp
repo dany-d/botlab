@@ -159,7 +159,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                         allMap[id].parentX = x;
                         allMap[id].parentY = y;
                         usablePath = makePath(allMap, goalCell, distances);
-                        for (unsigned int i = 0; i < usablePath.size();i++){
+                        for (unsigned int i = 0; i < usablePath.size();i+=3){
                         	auto globalpos = grid_position_to_global_position(Point<float>(usablePath[i].x, usablePath[i].y), distances);
                         	pose_temp.x = globalpos.x;
                         	pose_temp.y = globalpos.y;
