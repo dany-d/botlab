@@ -68,7 +68,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     ////////////////// TODO: Implement your A* search here //////////////////////////
     robot_path_t path;
     path.utime = start.utime;
-    path.path.push_back(start);  
+    // path.path.push_back(start);  
 
     auto goalCell = global_position_to_grid_cell(Point<float>(goal.x, goal.y), distances);
 
