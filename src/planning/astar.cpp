@@ -18,7 +18,7 @@ struct Node
 
 static bool isValid(int x, int y, const ObstacleDistanceGrid& distances, const SearchParams& params) { //If our Node is an obstacle it is not valid
 	if (distances.isCellInGrid(x, y)){
-    	if (distances(x,y) < params.minDistanceToObstacle)
+    	if (distances(x,y) <= params.minDistanceToObstacle)
     	{
     		return false;
     	}
