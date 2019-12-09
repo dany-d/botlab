@@ -6,6 +6,7 @@
 #include <queue>
 #include <set>
 #include <cassert>
+#include <cmath>
 
 
 bool is_frontier_cell(int x, int y, const OccupancyGrid& map);
@@ -20,6 +21,16 @@ pose_xyt_t nearest_navigable_cell(pose_xyt_t pose,
                                   const MotionPlanner& planner);
 pose_xyt_t search_to_nearest_free_space(Point<float> position, const OccupancyGrid& map, const MotionPlanner& planner);
 double path_length(const robot_path_t& path);
+static bool isValid(int x, int y, const ObstacleDistanceGrid& distances, const SearchParams& params) { //If our Node is an obstacle it is not valid
+    if (distances.isCellInGrid(x, y)){
+        if (distances(x,y) < params.minDistanceToObstacle)
+        {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
 
 
 std::vector<frontier_t> find_map_frontiers(const OccupancyGrid& map, 
@@ -86,9 +97,9 @@ std::vector<frontier_t> find_map_frontiers(const OccupancyGrid& map,
 }
 
 
-robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers, 
+robot_path_t plan_path_to_frontier(std::vector<frontier_t>& frontiers, 
                                    const pose_xyt_t& robotPose,
-                                   const OccupancyGrid& map,
+                                     OccupancyGrid& map,
                                    const MotionPlanner& planner)
 {
     ///////////// TODO: Implement your strategy to select the next frontier to explore here //////////////////
@@ -100,8 +111,72 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
     *       be able to drive straight to a frontier cell, but will need to drive somewhere close.
     */
     robot_path_t emptyPath;
+
+    // Defining the variables
+    float min_dist=10000;
+    float sum_x=0;
+    float sum_y=0;
+    int min_index=0;
+    float distance =0;
+    // The target pose for the motion planner
+    pose_xyt_t target;
+
+    for (int i=0;i<frontiers.size(); i++){
+        sum_x=0;
+        sum_y=0;
+
+        for(int j=0; j<frontiers[i].cells.size(); j++)
+        {
+            sum_x+=frontiers[i].cells[j].x;
+            sum_y+=frontiers[i].cells[j].y;            
+        }
+        // Storing the frontier x and y centroid location
+        frontiers[i].frontier_centroid_x=sum_x/frontiers[i].cells.size();
+        frontiers[i].frontier_centroid_y=sum_y/frontiers[i].cells.size();
+    }
+
+    for (int i=0;i<frontiers.size();i++){
+        float dist= pow((robotPose.x - frontiers[i].frontier_centroid_x),2)+pow((robotPose.y - frontiers[i].frontier_centroid_y),2);
+        if (dist<min_dist)
+            {
+                min_index=i;
+                min_dist=dist;
+            }
+    }
+
+
     
+
+    // planner.setMap(map);
+    
+        int var=7;
+
+        for (int k=-var; k<=var;k=k+2)
+        {
+            for (int l=-var; l<=var;l=l+var){
+                target.x=frontiers[min_index].frontier_centroid_x+k*map.metersPerCell();
+                target.y=frontiers[min_index].frontier_centroid_y+l*map.metersPerCell();
+                target.theta=0.0f;  
+
+                //planner.setMap(map);
+
+                std::cout<<target.x<<"   "<<target.y<<"   "<<target.theta << planner.isValidGoal(target) <<std::endl;
+
+                if (planner.isValidGoal(target))
+                {
+
+                    robot_path_t plannedPath=planner.planPath(robotPose, target); 
+                    std::cout<<"Returning Path from Frontier Exploration\n";
+                    return plannedPath;
+                }   
+            }
+        }
+        
+    // if(plannedPath.path_length>1)
+   
+    // else
     return emptyPath;
+    
 }
 
 

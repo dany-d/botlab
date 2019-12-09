@@ -16,6 +16,8 @@ class OccupancyGrid;
 struct frontier_t
 {
     std::vector<Point<float>> cells;  // The global coordinate of cells that make up the frontier
+    float frontier_centroid_x;
+    float frontier_centroid_y;
 };
 
 
@@ -50,9 +52,9 @@ std::vector<frontier_t> find_map_frontiers(const OccupancyGrid& map,
 * \param    planner             Planner to use for finding the next frontier
 * \return   Path to the selected frontier or a path indicating failure, as described above.
 */
-robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers, 
+robot_path_t plan_path_to_frontier(std::vector<frontier_t>& frontiers, 
                                    const pose_xyt_t& robotPose,
-                                   const OccupancyGrid& map,
+                                    OccupancyGrid& map,
                                    const MotionPlanner& planner);
 
 #endif // PLANNING_FRONTIERS_HPP

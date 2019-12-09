@@ -28,7 +28,7 @@ Exploration::Exploration(int32_t teamNumber,
 , haveNewMap_(false)
 , haveHomePose_(false)
 , lcmInstance_(lcmInstance)
-, pathReceived_(false)
+, pathReceived_(true)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
@@ -138,6 +138,7 @@ void Exploration::copyDataForUpdate(void)
 }
 
 
+
 void Exploration::executeStateMachine(void)
 {
     bool stateChanged = false;
@@ -243,7 +244,11 @@ int8_t Exploration::executeExploringMap(bool initialize)
     *           explored more of the map.
     *       -- You will likely be able to see the frontier before actually reaching the end of the path leading to it.
     */
-    
+	planner_.setMap(currentMap_);
+    frontiers_=find_map_frontiers(currentMap_, currentPose_, 0.35);
+
+    currentPath_=plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+                                
     /////////////////////////////// End student code ///////////////////////////////
     
     /////////////////////////   Create the status message    //////////////////////////
@@ -302,7 +307,8 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
     
-
+    // planner_.setMap(currentMap_);
+    currentPath_=planner_.planPath(currentPose_, homePose_);
 
     /////////////////////////////// End student code ///////////////////////////////
     
@@ -320,15 +326,11 @@ int8_t Exploration::executeReturningHome(bool initialize)
         status.status = exploration_status_t::STATUS_COMPLETE;
     }
     // Otherwise, if there's a path, then keep following it
-    else if(currentPath_.path.size() > 1)
-    {
-        status.status = exploration_status_t::STATUS_IN_PROGRESS;
-    }
-    // Else, there's no valid path to follow and we aren't home, so we have failed.
-    else
-    {
+    else if(currentPath_.path.size() >= 1)
+	{
         status.status = exploration_status_t::STATUS_FAILED;
-    }
+	}
+ 
     
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
     
