@@ -18,7 +18,14 @@ public:
     mutable float f_cost;
     mutable float g_cost;
 
-    Node(Point<int> n, Node *p, float g_cost) : n(Point<int>(n.x, n.y)), p(p), f_cost(std::numeric_limits<float>::infinity()), g_cost(g_cost){};
+    Node(Point<int> n, Node *p, float g_cost) : n(Point<int>(n.x, n.y)), p(p), f_cost(f_cost), g_cost(std::numeric_limits<float>::infinity()){};
+    // Node(Point<int> n, Node *p, float g_cost) : n(Point<int>(NULL,NULL)), p(nullptr), f_cost(0), g_cost(std::numeric_limits<float>::infinity()){};
+
+    // ~Node(){
+    //     delete &n;
+    //     delete f_cost;
+    //     delete g_cost;
+    // }
 };
 
 inline bool operator==(const Node &lhs, const Node &rhs)
