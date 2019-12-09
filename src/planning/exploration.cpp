@@ -11,9 +11,9 @@
 #include <unistd.h>
 #include <cassert>
 
-const float kReachedPositionThreshold = 0.05f;  // must get within this distance of a position for it to be explored
+const float kReachedPositionThreshold = 0.1f;  // must get within this distance of a position for it to be explored
 
-// Define an equality operator for poses to allow direct comparison of two paths
+// Define an equality operator for poses to allow direct comparison of two poses
 bool operator==(const pose_xyt_t& lhs, const pose_xyt_t& rhs)
 {
     return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.theta == rhs.theta);
@@ -28,14 +28,14 @@ Exploration::Exploration(int32_t teamNumber,
 , haveNewMap_(false)
 , haveHomePose_(false)
 , lcmInstance_(lcmInstance)
-, pathReceived_(true)
+, pathReceived_(false)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
-    
+
     lcmInstance_->subscribe(SLAM_MAP_CHANNEL, &Exploration::handleMap, this);
     lcmInstance_->subscribe(SLAM_POSE_CHANNEL, &Exploration::handlePose, this);
     lcmInstance_->subscribe(MESSAGE_CONFIRMATION_CHANNEL, &Exploration::handleConfirmation, this);
-    
+
     // Send an initial message indicating that the exploration module is initializing. Once the first map and pose are
     // received, then it will change to the exploring map state.
     exploration_status_t status;
@@ -43,9 +43,9 @@ Exploration::Exploration(int32_t teamNumber,
     status.team_number = teamNumber_;
     status.state = exploration_status_t::STATE_INITIALIZING;
     status.status = exploration_status_t::STATUS_IN_PROGRESS;
-    
+
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
-    
+
     MotionPlannerParams params;
     params.robotRadius = 0.2;
     planner_.setParams(params);
@@ -54,7 +54,7 @@ Exploration::Exploration(int32_t teamNumber,
 
 bool Exploration::exploreEnvironment()
 {
-    while((state_ != exploration_status_t::STATE_COMPLETED_EXPLORATION) 
+    while((state_ != exploration_status_t::STATE_COMPLETED_EXPLORATION)
         && (state_ != exploration_status_t::STATE_FAILED_EXPLORATION))
     {
         // If data is ready, then run an update of the exploration routine
@@ -65,10 +65,10 @@ bool Exploration::exploreEnvironment()
         // Otherwise wait a bit for data to arrive
         else
         {
-            usleep(10000);
+            usleep(1000);
         }
     }
-    
+
     // If the state is completed, then we didn't fail
     return state_ == exploration_status_t::STATE_COMPLETED_EXPLORATION;
 }
@@ -93,7 +93,12 @@ void Exploration::handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& 
 void Exploration::handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm)
 {
     std::lock_guard<std::mutex> autoLock(dataLock_);
-    if(confirm->channel == CONTROLLER_PATH_CHANNEL && confirm->creation_time == most_recent_path_time) pathReceived_ = true;
+    std::cout<<"Control path confirmation: "<<confirm->channel <<" "<<CONTROLLER_PATH_CHANNEL" "<< confirm->creation_time<<" "<<most_recent_path_time<<std::endl;
+    std::cout<<(confirm->channel == CONTROLLER_PATH_CHANNEL && confirm->creation_time == most_recent_path_time)<<std::endl;
+    if(confirm->channel == CONTROLLER_PATH_CHANNEL && confirm->creation_time == most_recent_path_time){
+      pathReceived_ = true;
+      //std::cout<<"TRUE\n";
+    }
 }
 
 bool Exploration::isReadyToUpdate(void)
@@ -106,7 +111,7 @@ bool Exploration::isReadyToUpdate(void)
 void Exploration::runExploration(void)
 {
     assert(isReadyToUpdate());
-    
+
     copyDataForUpdate();
     executeStateMachine();
 }
@@ -115,66 +120,71 @@ void Exploration::runExploration(void)
 void Exploration::copyDataForUpdate(void)
 {
     std::lock_guard<std::mutex> autoLock(dataLock_);
-    
+
     // Only copy the map if a new one has arrived because it is a costly operation
     if(haveNewMap_)
     {
         currentMap_ = incomingMap_;
         haveNewMap_ = false;
     }
-    
+
     // Always copy the pose because it is a cheap copy
     currentPose_ = incomingPose_;
     haveNewPose_ = false;
-    
+
     // The first pose received is considered to be the home pose
     if(!haveHomePose_)
     {
         homePose_ = incomingPose_;
         haveHomePose_ = true;
-        std::cout << "INFO: Exploration: Set home pose:" << homePose_.x << ',' << homePose_.y << ',' 
+        homePose_.x = 0;
+        homePose_.y = 0;
+        std::cout << "INFO: Exploration: Set home pose:" << homePose_.x << ',' << homePose_.y << ','
             << homePose_.theta << '\n';
     }
-}
 
+}
 
 
 void Exploration::executeStateMachine(void)
 {
     bool stateChanged = false;
     int8_t nextState = state_;
-    
+
     // Save the path from the previous iteration to determine if a new path was created and needs to be published
     robot_path_t previousPath = currentPath_;
-    
+
     // Run the state machine until the state remains the same after an iteration of the loop
     do
     {
         switch(state_)
         {
             case exploration_status_t::STATE_INITIALIZING:
+                std::cout<<"Initializing.\n";
                 nextState = executeInitializing();
                 break;
             case exploration_status_t::STATE_EXPLORING_MAP:
+                std::cout<<"Exploring.\n";
                 nextState = executeExploringMap(stateChanged);
                 break;
-                
+
             case exploration_status_t::STATE_RETURNING_HOME:
+                std::cout<<"Returning.\n";
+                //usleep(1000000);
                 nextState = executeReturningHome(stateChanged);
                 break;
 
             case exploration_status_t::STATE_COMPLETED_EXPLORATION:
                 nextState = executeCompleted(stateChanged);
                 break;
-                
+
             case exploration_status_t::STATE_FAILED_EXPLORATION:
                 nextState = executeFailed(stateChanged);
                 break;
         }
-        
         stateChanged = nextState != state_;
         state_ = nextState;
-        
+
     } while(stateChanged);
 
     //if path confirmation was not received, resend path
@@ -193,7 +203,7 @@ void Exploration::executeStateMachine(void)
 
     //if path changed, send current path
     if(previousPath.path != currentPath_.path)
-    { 
+    {
 
         std::cout << "INFO: Exploration: A new path was created on this iteration. Sending to Mbot:\n";
 
@@ -208,7 +218,6 @@ void Exploration::executeStateMachine(void)
         pathReceived_ = false;
         most_recent_path_time = currentPath_.utime;
     }
-
 }
 
 
@@ -221,9 +230,11 @@ int8_t Exploration::executeInitializing(void)
     status.team_number = teamNumber_;
     status.state = exploration_status_t::STATE_INITIALIZING;
     status.status = exploration_status_t::STATUS_COMPLETE;
-    
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
-    
+    most_recent_path_time = 0;
+    currentPath_.path_length = 0;
+    prev_frontier_size = 0;
+    currentTarget_ = currentPose_;
     return exploration_status_t::STATE_EXPLORING_MAP;
 }
 
@@ -236,7 +247,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
     *   - At the end of each iteration, then (1) or (2) must hold, otherwise exploration is considered to have failed:
     *       (1) frontiers_.empty() == true      : all frontiers have been explored as determined by find_map_frontiers()
     *       (2) currentPath_.path_length > 1 : currently following a path to the next frontier
-    * 
+    *
     *   - Use the provided function find_map_frontiers() to find all frontiers in the map.
     *   - You will need to implement logic to select which frontier to explore.
     *   - You will need to implement logic to decide when to select a new frontier to explore. Take into consideration:
@@ -244,52 +255,64 @@ int8_t Exploration::executeExploringMap(bool initialize)
     *           explored more of the map.
     *       -- You will likely be able to see the frontier before actually reaching the end of the path leading to it.
     */
-	planner_.setMap(currentMap_);
-    frontiers_=find_map_frontiers(currentMap_, currentPose_, 0.35);
+    planner_.setMap(currentMap_);
+    frontiers_ = find_map_frontiers(currentMap_, currentPose_);
+    if(frontiers_.size()>0){
+      std::cout<<"Number of frontiers: "<<frontiers_.size()<<std::endl;
+      if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || frontiers_.size()!=prev_frontier_size){
+          prev_frontier_size = frontiers_.size();
+          currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+          currentTarget_ = currentPath_.path[currentPath_.path_length-1];
+      }
+    }
 
-    currentPath_=plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
-                                
+    most_recent_path_time = currentPath_.utime;
+
     /////////////////////////////// End student code ///////////////////////////////
-    
+
     /////////////////////////   Create the status message    //////////////////////////
     exploration_status_t status;
     status.utime = utime_now();
     status.team_number = teamNumber_;
     status.state = exploration_status_t::STATE_EXPLORING_MAP;
-    
+
     // If no frontiers remain, then exploration is complete
     if(frontiers_.empty())
     {
+        std::cout<<"Frontiers empty.\n";
+        currentTarget_ = homePose_;
+        currentPath_.path_length = 0;
         status.status = exploration_status_t::STATUS_COMPLETE;
     }
     // Else if there's a path to follow, then we're still in the process of exploring
-    else if(currentPath_.path.size() > 1)
+    else if(currentPath_.path.size() >= 1)
     {
         status.status = exploration_status_t::STATUS_IN_PROGRESS;
     }
     // Otherwise, there are frontiers, but no valid path exists, so exploration has failed
     else
     {
+        //std::cout<<"Wait one iteration.\n";
         status.status = exploration_status_t::STATUS_FAILED;
     }
-    
+
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
-    
+
     ////////////////////////////   Determine the next state    ////////////////////////
     switch(status.status)
     {
         // Don't change states if we're still a work-in-progress
         case exploration_status_t::STATUS_IN_PROGRESS:
             return exploration_status_t::STATE_EXPLORING_MAP;
-            
+
         // If exploration is completed, then head home
         case exploration_status_t::STATUS_COMPLETE:
             return exploration_status_t::STATE_RETURNING_HOME;
-            
+
         // If something has gone wrong and we can't reach all frontiers, then fail the exploration.
         case exploration_status_t::STATUS_FAILED:
             return exploration_status_t::STATE_FAILED_EXPLORATION;
-            
+
         default:
             std::cerr << "ERROR: Exploration::executeExploringMap: Set an invalid exploration status. Exploration failed!";
             return exploration_status_t::STATE_FAILED_EXPLORATION;
@@ -306,42 +329,56 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
-    
-    // planner_.setMap(currentMap_);
-    currentPath_=planner_.planPath(currentPose_, homePose_);
-
+    planner_.setMap(currentMap_);
+    planner_.setNumFrontiers(0);
+    if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
+      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))<0.1){
+        // currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
+        currentTarget_ =  currentPath_.path[currentPath_.path_length-1];
+    }
+    std::cout<<"Path length to home: "<<currentPath_.path.size()<<"\n";
     /////////////////////////////// End student code ///////////////////////////////
-    
+
     /////////////////////////   Create the status message    //////////////////////////
     exploration_status_t status;
     status.utime = utime_now();
     status.team_number = teamNumber_;
     status.state = exploration_status_t::STATE_RETURNING_HOME;
-    
-    double distToHome = distance_between_points(Point<float>(homePose_.x, homePose_.y), 
+
+    double distToHome = distance_between_points(Point<float>(homePose_.x, homePose_.y),
                                                 Point<float>(currentPose_.x, currentPose_.y));
     // If we're within the threshold of home, then we're done.
     if(distToHome <= kReachedPositionThreshold)
     {
         status.status = exploration_status_t::STATUS_COMPLETE;
+        std::cout<<"Returning complete.\n";
     }
     // Otherwise, if there's a path, then keep following it
     else if(currentPath_.path.size() >= 1)
-	{
+    {
+        status.status = exploration_status_t::STATUS_IN_PROGRESS;
+    }
+    // Else, there's no valid path to follow and we aren't home, so we have failed.
+    else
+    {
         status.status = exploration_status_t::STATUS_FAILED;
-	}
- 
-    
+        std::cout<<"No vaild path and not reached home.\n";
+    }
+
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
-    
+
     ////////////////////////////   Determine the next state    ////////////////////////
     if(status.status == exploration_status_t::STATUS_IN_PROGRESS)
     {
         return exploration_status_t::STATE_RETURNING_HOME;
     }
-    else // if(status.status == exploration_status_t::STATUS_FAILED)
+    else if(status.status == exploration_status_t::STATUS_FAILED)
     {
         return exploration_status_t::STATE_FAILED_EXPLORATION;
+    }
+    else
+    {
+        return exploration_status_t::STATE_COMPLETED_EXPLORATION;
     }
 }
 
@@ -353,9 +390,9 @@ int8_t Exploration::executeCompleted(bool initialize)
     msg.team_number = teamNumber_;
     msg.state = exploration_status_t::STATE_COMPLETED_EXPLORATION;
     msg.status = exploration_status_t::STATUS_COMPLETE;
-    
+
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &msg);
-    
+
     return exploration_status_t::STATE_COMPLETED_EXPLORATION;
 }
 
@@ -368,8 +405,8 @@ int8_t Exploration::executeFailed(bool initialize)
     msg.team_number = teamNumber_;
     msg.state = exploration_status_t::STATE_FAILED_EXPLORATION;
     msg.status = exploration_status_t::STATUS_FAILED;
-    
+
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &msg);
-    
+
     return exploration_status_t::STATE_FAILED_EXPLORATION;
 }
