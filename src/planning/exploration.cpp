@@ -293,7 +293,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
     else
     {
         //std::cout<<"Wait one iteration.\n";
-        status.status = exploration_status_t::STATUS_FAILED;
+        status.status = exploration_status_t::STATUS_IN_PROGRESS; //exploration_status_t::STATUS_FAILED;
     }
 
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
@@ -329,11 +329,11 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
-    planner_.setMap(currentMap_);
+    //planner_.setMap(currentMap_);
     planner_.setNumFrontiers(0);
     if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
-      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))<0.1){
-        // currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
+      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))<=kReachedPositionThreshold){
+        currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
         currentTarget_ =  currentPath_.path[currentPath_.path_length-1];
     }
     std::cout<<"Path length to home: "<<currentPath_.path.size()<<"\n";
