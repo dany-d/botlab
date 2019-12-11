@@ -119,9 +119,9 @@ robot_path_t search_for_path(pose_xyt_t start,
     std::unordered_set<Node *, hash, equal> open_set;
     std::vector<Node*> del_set;
     
-    Point<int> global_start_pt(start.x,start.y);
+    Point<double> global_start_pt(start.x,start.y);
     Point<int> start_point(global_position_to_grid_cell(global_start_pt,distances).x,global_position_to_grid_cell(global_start_pt,distances).y);
-    Point<int> global_goal_pt(goal.x,goal.y);
+    Point<double> global_goal_pt(goal.x,goal.y);
     Point<int> goal_point(global_position_to_grid_cell(global_goal_pt, distances).x, global_position_to_grid_cell(global_goal_pt, distances).y);
 
     Node start_node = Node(start_point, nullptr, 0);
@@ -179,6 +179,8 @@ robot_path_t search_for_path(pose_xyt_t start,
             
             path = construct_path(currentNode,path,distances);
             path.path.insert(path.path.begin(),start);
+            path.path.push_back(goal);
+
             for(int i;i<path.path.size();++i){
                 std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
             }
@@ -203,7 +205,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             {
                 if (newX == 0 && newY ==0){continue;} // ignoring currentNode
 
-                // Point<int> neighbor_pt(0, 0);
+                // Point<double> neighbor_pt(0, 0);
 
                 // Node *n_ptr;
                 Point<int> neighbor_pt(currentNode->n.x + step * newX, currentNode->n.y + step * newY);
