@@ -12,6 +12,9 @@
 //////// Additional channels for processes that run on the Mbot -- odometry and motion_controller.
 #define ODOMETRY_CHANNEL "ODOMETRY"
 #define CONTROLLER_PATH_CHANNEL "CONTROLLER_PATH"
+#define MBOT_ARM "MBOT_BLOCK_LIST"
+#define COMMAND_ARM "COMMAND_ARM_STATE"
+
 
 /////// Command channels ///////
 

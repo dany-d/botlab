@@ -9,6 +9,10 @@
 #include <lcmtypes/pose_xyt_t.hpp>
 #include <lcmtypes/robot_path_t.hpp>
 #include <lcmtypes/message_received_t.hpp>
+#include <lcmtypes/mbot_arm_block_list_t.hpp>
+#include <lcmtypes/mbot_arm_block_t.hpp>
+#include <lcmtypes/mbot_arm_cmd_t.hpp>
+
 #include <lcm/lcm-cpp.hpp>
 #include <mutex>
 #include <set>
@@ -71,6 +75,7 @@ public:
     void handleMap(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const occupancy_grid_t* map);
     void handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const pose_xyt_t* pose);
     void handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm);
+    void handleBlock(const lcm::ReceiveBuffer *rbuf, const std::string &channel, const mbot_arm_block_list_t *blocklist);
 
 private:
     
@@ -92,10 +97,12 @@ private:
     pose_xyt_t incomingPose_;           // Temporary storage for the most recently received pose until needed by explore thread
     OccupancyGrid incomingMap_;         // Temporary storage for the most recently received map until needed by explore thread
     
+
     bool haveNewPose_;                  // Flag indicating if a new pose has been received since the last call to copyDataForUpdate
     bool haveNewMap_;                   // Flag indicating if a new map has been received since the last call to copyDataForUpdate
     bool haveHomePose_;                 // Flag indicating if the home pose has been set
-    
+    bool haveNewBlocks_;                // Flag indicating if the home pose has been set
+
     lcm::LCM* lcmInstance_;             // Instance of LCM to use for sending out information
     std::mutex dataLock_;               // Lock to keep the LCM and explore threads properly synchronized
     
@@ -107,7 +114,16 @@ private:
     size_t prev_frontier_size;
     bool pathReceived_;
     int64_t most_recent_path_time;
-//    int8_t path_redundancy_count;
+
+    // Mbot arm block and camera
+    mbot_arm_block_list_t incomingblocklist_; //get blocklist
+    mbot_arm_block_list_t currentblocklist_; //get blocklist
+    mbot_arm_cmd_t detectblock;
+    pose_xyt_t blockPose_;
+    robot_path_t path;
+
+
+    //    int8_t path_redundancy_count;
 
     /////////////////////////// End student code ///////////////////////////////
     
@@ -119,12 +135,15 @@ private:
     void   executeStateMachine(void);
     int8_t executeInitializing(void);
     int8_t executeExploringMap(bool initialize);
+    
     int8_t executeReturningHome(bool initialize);
     int8_t executeCompleted(bool initialize);
     int8_t executeFailed(bool initialize);
     
     /////////// TODO: Add any additional methods you might need here //////////////
-    
+    int8_t executeBlockDetection(bool initialize);
+    int8_t executeGrabPlanner(bool initialize);
+    int8_t executeGrabBlock(bool initialize);
     /////////////////////////// End student code ///////////////////////////////
 };
 

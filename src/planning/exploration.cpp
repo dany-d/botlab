@@ -10,6 +10,7 @@
 #include <queue>
 #include <unistd.h>
 #include <cassert>
+#include <vector> 
 
 const float kReachedPositionThreshold = 0.05f;  // must get within this distance of a position for it to be explored
 
@@ -35,6 +36,7 @@ Exploration::Exploration(int32_t teamNumber,
     lcmInstance_->subscribe(SLAM_MAP_CHANNEL, &Exploration::handleMap, this);
     lcmInstance_->subscribe(SLAM_POSE_CHANNEL, &Exploration::handlePose, this);
     lcmInstance_->subscribe(MESSAGE_CONFIRMATION_CHANNEL, &Exploration::handleConfirmation, this);
+    lcmInstance_->subscribe(MBOT_ARM, &Exploration::handleBlock, this);
     
     // Send an initial message indicating that the exploration module is initializing. Once the first map and pose are
     // received, then it will change to the exploring map state.
@@ -88,6 +90,14 @@ void Exploration::handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& 
     std::lock_guard<std::mutex> autoLock(dataLock_);
     incomingPose_ = *pose;
     haveNewPose_ = true;
+}
+
+void Exploration::handleBlock(const lcm::ReceiveBuffer *rbuf, const std::string &channel, const mbot_arm_block_list_t *blocklist)
+{
+
+    std::lock_guard<std::mutex> autoLock(dataLock_);
+    incomingblocklist_ = *blocklist;
+    haveNewBlocks_ = true;
 }
 
 void Exploration::handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm)
@@ -156,6 +166,18 @@ void Exploration::executeStateMachine(void)
                 break;
             case exploration_status_t::STATE_EXPLORING_MAP:
                 nextState = executeExploringMap(stateChanged);
+                break;
+
+            case exploration_status_t::STATE_DETECT_BLOCKS:
+                nextState = executeBlockDetection(stateChanged);
+                break;
+
+            case exploration_status_t::STATE_PLAN_TO_GRAB_LOC:
+                nextState = executeGrabPlanner(stateChanged);
+                break;
+
+            case exploration_status_t::STATE_GRAB_BLOCK:
+                nextState = executeGrabBlock(stateChanged);
                 break;
                 
             case exploration_status_t::STATE_RETURNING_HOME:
@@ -229,6 +251,18 @@ int8_t Exploration::executeInitializing(void)
 
 int8_t Exploration::executeExploringMap(bool initialize)
 {
+    planner_.setMap(currentMap_);
+    frontiers_ = find_map_frontiers(currentMap_, currentPose_);
+    if (frontiers_.size() > 0)
+    {
+        std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
+        if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || frontiers_.size() != prev_frontier_size)
+        {
+            prev_frontier_size = frontiers_.size();
+            currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+            currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+        }
+    }
     //////////////////////// TODO: Implement your method for exploring the map ///////////////////////////
     /*
     * NOTES:
@@ -291,6 +325,63 @@ int8_t Exploration::executeExploringMap(bool initialize)
     }
 }
 
+int8_t Exploration::executeBlockDetection(bool initialize)
+{
+    // Stay in the completed state forever because exploration only explores a single map.
+    mbot_arm_cmd_t detectblock;
+    detectblock.utime = utime_now();
+    detectblock.mbot_cmd = 1;
+
+    lcmInstance_->publish(COMMAND_ARM, &detectblock);
+
+    // return exploration_status_t::STATUS_COMPLETE;
+}
+
+int8_t Exploration::executeGrabPlanner(bool initialize)
+{
+
+    if(haveNewBlocks_)
+    {
+        currentblocklist_ = incomingblocklist_;
+        haveNewBlocks_ = false;
+    }
+
+    
+    // Stay in the completed state forever because exploration only explores a single map.
+    mbot_arm_block_list_t currentblocklist_;
+
+    // int8_t n_blocks = detectblock.num_blocks;
+    blockPose_ = currentblocklist_.blocks[0].pose;
+
+    path = planner_.planPath(currentPose_, blockPose_);
+
+    int itr = path.path.size();
+    while (itr != 1)
+    {
+        // int a = path.path[itr].x;
+        if(sqrt((path.path[itr].x - blockPose_.x)*(path.path[itr].x - blockPose_.x) + path.path[itr].y - blockPose_.y)*(path.path[itr].y - blockPose_.y) < 0.15){
+            --itr;
+        }
+    }
+    path.path.resize(path.path.size()-itr);
+
+    lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &path);
+
+    return exploration_status_t::STATE_GRAB_BLOCK;
+}
+
+
+int8_t Exploration::executeGrabBlock(bool initialize)
+{
+    mbot_arm_cmd_t detectblock;
+    detectblock.utime = utime_now();
+    detectblock.mbot_cmd = 3;
+
+    lcmInstance_->publish(COMMAND_ARM, &detectblock);
+
+    // return exploration_status_t::STATE_COMPLETED_EXPLORATION;
+    return 0;
+}
 
 int8_t Exploration::executeReturningHome(bool initialize)
 {
@@ -301,26 +392,32 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
-    
-
-
+    planner_.setMap(currentMap_);
+    planner_.setNumFrontiers(0);
+    if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || sqrt((homePose_.x - currentTarget_.x) * (homePose_.x - currentTarget_.x) + (homePose_.y - currentTarget_.y) * (homePose_.y - currentTarget_.y)) < 0.1)
+    {
+        // currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
+        currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+    }
+    std::cout << "Path length to home: " << currentPath_.path.size() << "\n";
     /////////////////////////////// End student code ///////////////////////////////
-    
+
     /////////////////////////   Create the status message    //////////////////////////
     exploration_status_t status;
     status.utime = utime_now();
     status.team_number = teamNumber_;
     status.state = exploration_status_t::STATE_RETURNING_HOME;
-    
-    double distToHome = distance_between_points(Point<float>(homePose_.x, homePose_.y), 
+
+    double distToHome = distance_between_points(Point<float>(homePose_.x, homePose_.y),
                                                 Point<float>(currentPose_.x, currentPose_.y));
     // If we're within the threshold of home, then we're done.
-    if(distToHome <= kReachedPositionThreshold)
+    if (distToHome <= kReachedPositionThreshold)
     {
         status.status = exploration_status_t::STATUS_COMPLETE;
+        std::cout << "Returning complete.\n";
     }
     // Otherwise, if there's a path, then keep following it
-    else if(currentPath_.path.size() > 1)
+    else if (currentPath_.path.size() >= 1)
     {
         status.status = exploration_status_t::STATUS_IN_PROGRESS;
     }
@@ -328,18 +425,23 @@ int8_t Exploration::executeReturningHome(bool initialize)
     else
     {
         status.status = exploration_status_t::STATUS_FAILED;
+        std::cout << "No vaild path and not reached home.\n";
     }
-    
+
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
-    
+
     ////////////////////////////   Determine the next state    ////////////////////////
-    if(status.status == exploration_status_t::STATUS_IN_PROGRESS)
+    if (status.status == exploration_status_t::STATUS_IN_PROGRESS)
     {
         return exploration_status_t::STATE_RETURNING_HOME;
     }
-    else // if(status.status == exploration_status_t::STATUS_FAILED)
+    else if (status.status == exploration_status_t::STATUS_FAILED)
     {
         return exploration_status_t::STATE_FAILED_EXPLORATION;
+    }
+    else
+    {
+        return exploration_status_t::STATE_COMPLETED_EXPLORATION;
     }
 }
 
@@ -356,6 +458,7 @@ int8_t Exploration::executeCompleted(bool initialize)
     
     return exploration_status_t::STATE_COMPLETED_EXPLORATION;
 }
+
 
 
 int8_t Exploration::executeFailed(bool initialize)
