@@ -30,6 +30,7 @@ Exploration::Exploration(int32_t teamNumber,
 , haveHomePose_(false)
 , lcmInstance_(lcmInstance)
 , pathReceived_(true)
+, haveNewBlocks_(false)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
@@ -49,7 +50,7 @@ Exploration::Exploration(int32_t teamNumber,
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
     
     MotionPlannerParams params;
-    params.robotRadius = 0.2;
+    params.robotRadius = 0.17;
     planner_.setParams(params);
 }
 
@@ -92,7 +93,7 @@ void Exploration::handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& 
     haveNewPose_ = true;
 }
 
-void Exploration::handleBlock(const lcm::ReceiveBuffer *rbuf, const std::string &channel, const mbot_arm_block_list_t *blocklist)
+void Exploration::handleBlock(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const mbot_arm_block_list_t* blocklist)
 {
 
     std::lock_guard<std::mutex> autoLock(dataLock_);
@@ -136,7 +137,13 @@ void Exploration::copyDataForUpdate(void)
     // Always copy the pose because it is a cheap copy
     currentPose_ = incomingPose_;
     haveNewPose_ = false;
-    
+
+    if(haveNewBlocks_)
+    {
+        currentblocklist_ = incomingblocklist_;
+        haveNewBlocks_ = false;
+    }
+
     // The first pose received is considered to be the home pose
     if(!haveHomePose_)
     {
@@ -180,6 +187,10 @@ void Exploration::executeStateMachine(void)
             case exploration_status_t::STATE_GRAB_BLOCK:
                 nextState = executeGrabBlock(stateChanged);
                 break;
+
+            case exploration_status_t::STATE_DROP_BLOCK:
+                nextState = executeDropBlock(stateChanged);
+                break;
                 
             case exploration_status_t::STATE_RETURNING_HOME:
                 nextState = executeReturningHome(stateChanged);
@@ -212,6 +223,9 @@ void Exploration::executeStateMachine(void)
 
         lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
     }
+
+
+    // TODO: Add confirmation for block position
 
     //if path changed, send current path
     if(previousPath.path != currentPath_.path)
@@ -332,25 +346,18 @@ int8_t Exploration::executeExploringMap(bool initialize)
 
 int8_t Exploration::executeBlockDetection(bool initialize)
 {
-    // Stay in the completed state forever because exploration only explores a single map.
+    // Publish on channel to camera to detect block
     mbot_arm_cmd_t detectblock;
     detectblock.utime = utime_now();
     detectblock.mbot_cmd = 1;
 
     lcmInstance_->publish(COMMAND_ARM, &detectblock);
 
-    // return exploration_status_t::STATUS_COMPLETE;
+    return exploration_status_t::STATUS_IN_PROGRESS;
 }
 
 int8_t Exploration::executeGrabPlanner(bool initialize)
 {
-
-    if(haveNewBlocks_)
-    {
-        currentblocklist_ = incomingblocklist_;
-        haveNewBlocks_ = false;
-    }
-
     
     // Stay in the completed state forever because exploration only explores a single map.
     mbot_arm_block_list_t currentblocklist_;
@@ -358,13 +365,15 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     // int8_t n_blocks = detectblock.num_blocks;
     blockPose_ = currentblocklist_.blocks[0].pose;
 
-    path = planner_.planPath(currentPose_, blockPose_);
+    // Added by Salman
+    currentPath_=planner_.planPath(currentPose_, blockPose_);
+    path = currentPath_;
 
     int itr = path.path.size();
     while (itr != 1)
     {
         // int a = path.path[itr].x;
-        if(sqrt((path.path[itr].x - blockPose_.x)*(path.path[itr].x - blockPose_.x) + path.path[itr].y - blockPose_.y)*(path.path[itr].y - blockPose_.y) < 0.15){
+        if(sqrt((path.path[itr].x - blockPose_.x)*(path.path[itr].x - blockPose_.x) + (path.path[itr].y - blockPose_.y)*(path.path[itr].y - blockPose_.y)) < 0.15){
             --itr;
         }
     }
@@ -378,6 +387,7 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
 
 int8_t Exploration::executeGrabBlock(bool initialize)
 {
+    status.state = exploration_status_t::STATE_RETURNING_HOME;
     mbot_arm_cmd_t detectblock;
     detectblock.utime = utime_now();
     detectblock.mbot_cmd = 3;
