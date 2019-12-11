@@ -29,7 +29,7 @@ Exploration::Exploration(int32_t teamNumber,
 , haveNewMap_(false)
 , haveHomePose_(false)
 , lcmInstance_(lcmInstance)
-, pathReceived_(false)
+, pathReceived_(true)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
@@ -146,6 +146,7 @@ void Exploration::copyDataForUpdate(void)
             << homePose_.theta << '\n';
     }
 }
+
 
 
 void Exploration::executeStateMachine(void)
@@ -277,7 +278,11 @@ int8_t Exploration::executeExploringMap(bool initialize)
     *           explored more of the map.
     *       -- You will likely be able to see the frontier before actually reaching the end of the path leading to it.
     */
-    
+	planner_.setMap(currentMap_);
+    frontiers_=find_map_frontiers(currentMap_, currentPose_, 0.35);
+
+    currentPath_=plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+                                
     /////////////////////////////// End student code ///////////////////////////////
     
     /////////////////////////   Create the status message    //////////////////////////
@@ -392,6 +397,7 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
+<<<<<<< HEAD
     planner_.setMap(currentMap_);
     planner_.setNumFrontiers(0);
     if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || sqrt((homePose_.x - currentTarget_.x) * (homePose_.x - currentTarget_.x) + (homePose_.y - currentTarget_.y) * (homePose_.y - currentTarget_.y)) < 0.1)
@@ -400,6 +406,16 @@ int8_t Exploration::executeReturningHome(bool initialize)
         currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
     }
     std::cout << "Path length to home: " << currentPath_.path.size() << "\n";
+||||||| merged common ancestors
+    
+
+
+=======
+    
+    // planner_.setMap(currentMap_);
+    currentPath_=planner_.planPath(currentPose_, homePose_);
+
+>>>>>>> 76bf9b3d2f7274bb8da25b5f3b6fef4deac6b700
     /////////////////////////////// End student code ///////////////////////////////
 
     /////////////////////////   Create the status message    //////////////////////////
@@ -417,6 +433,7 @@ int8_t Exploration::executeReturningHome(bool initialize)
         std::cout << "Returning complete.\n";
     }
     // Otherwise, if there's a path, then keep following it
+<<<<<<< HEAD
     else if (currentPath_.path.size() >= 1)
     {
         status.status = exploration_status_t::STATUS_IN_PROGRESS;
@@ -424,10 +441,31 @@ int8_t Exploration::executeReturningHome(bool initialize)
     // Else, there's no valid path to follow and we aren't home, so we have failed.
     else
     {
+||||||| merged common ancestors
+    else if(currentPath_.path.size() > 1)
+    {
+        status.status = exploration_status_t::STATUS_IN_PROGRESS;
+    }
+    // Else, there's no valid path to follow and we aren't home, so we have failed.
+    else
+    {
+=======
+    else if(currentPath_.path.size() >= 1)
+	{
+>>>>>>> 76bf9b3d2f7274bb8da25b5f3b6fef4deac6b700
         status.status = exploration_status_t::STATUS_FAILED;
+<<<<<<< HEAD
         std::cout << "No vaild path and not reached home.\n";
     }
 
+||||||| merged common ancestors
+    }
+    
+=======
+	}
+ 
+    
+>>>>>>> 76bf9b3d2f7274bb8da25b5f3b6fef4deac6b700
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
 
     ////////////////////////////   Determine the next state    ////////////////////////

@@ -6,6 +6,7 @@
 #include <queue>
 #include <set>
 #include <cassert>
+#include <cmath>
 
 bool is_frontier_cell(int x, int y, const OccupancyGrid &map);
 frontier_t grow_frontier(Point<int> cell, const OccupancyGrid &map, std::set<Point<int>> &visitedFrontiers);
@@ -194,6 +195,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t> &frontiers,
     }
     std::cout << "Empty Path returned.\n";
     return emptyPath;
+    
 }
 
 bool is_frontier_cell(int x, int y, const OccupancyGrid &map)
