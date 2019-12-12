@@ -47,14 +47,14 @@ inline float wrap_to_2pi(float angle)
 * wrap_to_pi_2 takes an arbitrary angle and wraps it to the range [-pi/2,pi/2]. This function is intended
 * for use with lines where the direction doesn't matter, e.g. where something like 3pi/4 == -pi/4 like the
 * slope of a line.
-* 
+*
 * \param    angle           Angle to wrap
 * \return   Angle in the range [-pi/2,pi/2].
 */
 inline float wrap_to_pi_2(float angle)
 {
     float wrapped = wrap_to_pi(angle);
-    
+
     if(wrapped < -M_PI_2)
     {
         wrapped += M_PI;
@@ -63,7 +63,7 @@ inline float wrap_to_pi_2(float angle)
     {
         wrapped -= M_PI;
     }
-    
+
     return wrapped;
 }
 
@@ -105,7 +105,7 @@ inline double angle_diff_abs(double leftAngle, double rightAngle)
 * The calculation is the angle_diff. If the abs(diff) > M_PI/2, then the result is PI - abs(diff). This
 * function is intended for cases where the angles represent line slopes rather than vectors. The slope
 * only can differ by at most PI/2.
-* 
+*
 * \param    lhs         Angle on left of '-'
 * \param    rhs         Angle on right of '-'
 * \return   lhs - rhs, in the range [0, PI/2].
@@ -113,7 +113,7 @@ inline double angle_diff_abs(double leftAngle, double rightAngle)
 inline double angle_diff_abs_pi_2(double lhs, double rhs)
 {
     double diff = std::abs(angle_diff(lhs, rhs));
-    
+
     return (diff < M_PI/2.0) ? diff : M_PI-diff;
 }
 

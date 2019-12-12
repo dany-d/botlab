@@ -27,7 +27,7 @@ struct MotionPlannerParams
     * walls.
     */
     MotionPlannerParams(void)
-    : robotRadius(0.17) // by default, have a little extra slop to keep the robot from getting too close to the walls
+    : robotRadius(0.15) // by default, have a little extra slop to keep the robot from getting too close to the walls
     {
     }
 };

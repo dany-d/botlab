@@ -329,10 +329,10 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
-    //planner_.setMap(currentMap_);
+    planner_.setMap(currentMap_);
     planner_.setNumFrontiers(0);
     if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
-      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))<=kReachedPositionThreshold){
+      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))>kReachedPositionThreshold){
         currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
         currentTarget_ =  currentPath_.path[currentPath_.path_length-1];
     }

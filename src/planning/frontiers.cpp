@@ -142,9 +142,8 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
     emptyPath.utime = robotPose.utime;
     emptyPath.path_length = 0;
     //std::cout<<"Map info (w,h): "<<map.widthInMeters()<<" "<<map.heightInMeters()<<" "<<map.heightInCells()<<" "<<map.widthInCells()<<std::endl;
-    int L = 5;
-    for (int l=0; l<L; ++l){
-      for(unsigned int i=0; i<frontiers.size(); i++){
+    int L = 10;
+    for(unsigned int i=0; i<frontiers.size(); i++){
         pose_xyt_t goalPose;
         goalPose.x = 0;
         goalPose.y = 0;
@@ -162,7 +161,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
         pose_xyt_t goalPose2;
         goalPose2.x  = goalPose.x;
         goalPose2.y  = goalPose.y;
-
+      for (int l=0; l<L; ++l){
         for (int m=0; m<l; ++m){
           for (int n=0; n<l; ++n){
             goalPose2.x = goalPose.x + (m-l/2)*map.metersPerCell();
@@ -183,6 +182,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
       }
     }
     std::cout<<"Empty Path returned.\n";
+    emptyPath.path.push_back(robotPose);
     return emptyPath;
 }
 

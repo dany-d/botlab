@@ -80,18 +80,20 @@ bool MotionPlanner::isPathSafe(const robot_path_t& path) const
 {
 
     ///////////// TODO: Implement your test for a safe path here //////////////////
-    if(path.path_length < 1)
+    if(path.path_length <= 1)
     {
         return false;
     }
 
     // Look at each position in the path, along with any intermediate points between the positions to make sure they are
     // far enough from walls in the occupancy grid to be safe
+    int cnt = 0;
     for(auto p : path.path)
     {
         Point<int> cell = distances_.poseToCell(p.x, p.y);
-        if(distances_(cell.x, cell.y) < params_.robotRadius - 0.05)
+        if(distances_(cell.x, cell.y) < params_.robotRadius && cnt!=1)
         {
+            cnt++;
             std::cout<<"Path not safe\n";
             return false;
         }
@@ -109,6 +111,6 @@ void MotionPlanner::setMap(const OccupancyGrid& map)
 void MotionPlanner::setParams(const MotionPlannerParams& params)
 {
     searchParams_.minDistanceToObstacle = params_.robotRadius;
-    searchParams_.maxDistanceWithCost = 5.0 * searchParams_.minDistanceToObstacle;
-    searchParams_.distanceCostExponent = 2.0;
+    searchParams_.maxDistanceWithCost = 10.0 * searchParams_.minDistanceToObstacle;
+    searchParams_.distanceCostExponent = 9.0;
 }
