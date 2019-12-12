@@ -151,7 +151,7 @@ bool plotLineLow(float x0, float y0, float x1, float y1, float minDistanceToObst
     float D = 2 * dy - dx;
     float cur_y = y0;
     float cur_x = x0;
-    for (; cur_x < x1; cur_x += 0.025)
+    for (; cur_x < x1; cur_x += distances.metersPerCell()/2.)
     {
       //std::cout<<distances(cur_x, cur_y) <<std::endl;
       if (distances(floor(cur_x*20 + 100), floor(cur_y*20 + 100)) < minDistanceToObstacle )
@@ -161,7 +161,7 @@ bool plotLineLow(float x0, float y0, float x1, float y1, float minDistanceToObst
       }
         if (D > 0)
         {
-            cur_y += yi * 0.025;
+            cur_y += yi * distances.metersPerCell()/2.;
             D -= 2 * dx;
         }
         D += 2 * dy;
@@ -181,7 +181,7 @@ bool plotLineHigh(float x0, float y0, float x1, float y1,  float minDistanceToOb
     float D = 2 * dx - dy;
     float cur_y = y0;
     float cur_x = x0;
-    for (; cur_y < y1; cur_y += 0.025)
+    for (; cur_y < y1; cur_y += distances.metersPerCell()/2.)
     {
       //std::cout<<distances(cur_x, cur_y) <<std::endl;
       if (distances(floor(cur_x*20 + 100), floor(cur_y*20 + 100)) < minDistanceToObstacle )
@@ -191,7 +191,7 @@ bool plotLineHigh(float x0, float y0, float x1, float y1,  float minDistanceToOb
       }
         if (D > 0)
         {
-            cur_x += xi * 0.025;
+            cur_x += xi * distances.metersPerCell()/2.;
             D -= 2 * dy;
         }
         D += 2 * dx;
@@ -205,7 +205,7 @@ bool IsPathFree(pose_xyt_t first, pose_xyt_t second,
     float y0 = first.y;
     float x1 = second.x;
     float y1 = second.y;
-    float minDist =  params.minDistanceToObstacle + 0.05;
+    float minDist =  params.minDistanceToObstacle + distances.metersPerCell();
     if (std::abs(y1 - y0) < std::abs(x1 - x0))
     {
         if (x0 > x1)

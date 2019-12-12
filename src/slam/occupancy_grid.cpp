@@ -9,7 +9,7 @@ using namespace std;
 OccupancyGrid::OccupancyGrid(void)
 : width_(0)
 , height_(0)
-, metersPerCell_(0.05f)
+, metersPerCell_(0.025f) //changed from 0.05
 , cellsPerMeter_(1.0 / metersPerCell_)
 , globalOrigin_(0, 0)
 {
@@ -26,11 +26,11 @@ OccupancyGrid::OccupancyGrid(float widthInMeters,
     assert(heightInMeters > 0.0f);
     assert(metersPerCell_ <= widthInMeters);
     assert(metersPerCell_ <= heightInMeters);
-    
+
     cellsPerMeter_ = 1.0f / metersPerCell_;
     width_         = widthInMeters * cellsPerMeter_;
     height_        = heightInMeters * cellsPerMeter_;
-    
+
     cells_.resize(width_ * height_);
     reset();
 }
@@ -53,7 +53,7 @@ void OccupancyGrid::reset(void)
 
 
 bool OccupancyGrid::isCellInGrid(int x, int y) const
-{ 
+{
     bool xCoordIsValid = (x >= 0) && (x < width_);
     bool yCoordIsValid = (y >= 0) && (y < height_);
     return xCoordIsValid && yCoordIsValid;
@@ -66,7 +66,7 @@ CellOdds OccupancyGrid::logOdds(int x, int y) const
     {
         return operator()(x, y);
     }
-    
+
     return 0;
 }
 
@@ -91,7 +91,7 @@ occupancy_grid_t OccupancyGrid::toLCM(void) const
     grid.height          = height_;
     grid.num_cells       = cells_.size();
     grid.cells           = cells_;
-    
+
     return grid;
 }
 
@@ -116,10 +116,10 @@ bool OccupancyGrid::saveToFile(const std::string& filename) const
         std::cerr << "ERROR: OccupancyGrid::saveToFile: Failed to save to " << filename << '\n';
         return false;
     }
-    
+
     // Write header
     out << globalOrigin_.x << ' ' << globalOrigin_.y << ' ' << width_ << ' ' << height_ << ' ' << metersPerCell_ << '\n';
-    
+
     // Write out each cell value
     for(int y = 0; y < height_; ++y)
     {
@@ -130,7 +130,7 @@ bool OccupancyGrid::saveToFile(const std::string& filename) const
         }
         out << '\n';
     }
-    
+
     return out.good();
 }
 
@@ -143,21 +143,21 @@ bool OccupancyGrid::loadFromFile(const std::string& filename)
         std::cerr << "ERROR: OccupancyGrid::loadFromFile: Failed to load from " << filename << '\n';
         return false;
     }
-    
+
     width_ = -1;
     height_ = -1;
-    
+
     // Read header
     in >> globalOrigin_.x >> globalOrigin_.y >> width_ >> height_ >> metersPerCell_;
-    
+
     // Check sanity of values
     assert(width_ > 0);
     assert(height_ > 0);
     assert(metersPerCell_ > 0.0f);
-    
+
     // Allocate new memory for the grid
     cells_.resize(width_ * height_);
-    
+
     // Allocate new memory for the grid
     cells_.resize(width_ * height_);
     // Read in each cell value
@@ -170,6 +170,6 @@ bool OccupancyGrid::loadFromFile(const std::string& filename)
             setLogOdds(x, y, odds);
         }
     }
-    
+
     return true;
 }
