@@ -277,7 +277,7 @@ int8_t Exploration::executeInitializing(void)
     
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
     
-    return exploration_status_t::STATE_EXPLORING_MAP;
+    return exploration_status_t::STATE_DETECT_BLOCKS;
 }
 
 
@@ -458,6 +458,8 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
+
+    std::cout<<"executeReturningHome: Now trying to go home\n";
     planner_.setMap(currentMap_);
     planner_.setNumFrontiers(0);
     if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
