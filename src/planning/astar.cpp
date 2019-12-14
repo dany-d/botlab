@@ -170,7 +170,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     //     std::cout << "Goal position invalid" << std::endl;
     // }
 
-        while (open_set.size() > 0)
+    while (open_set.size() > 0)
     {
         // select node
         Node *currentNode = pq.top();
@@ -186,7 +186,7 @@ robot_path_t search_for_path(pose_xyt_t start,
         if (itr ==100000){
             std::cout << "iterated: 100k times... somethings up " << std::endl;
             // print_queue(pq);           // break;
-            std::cin.get();
+            // std::cin.get();
         }
 
 
@@ -270,4 +270,9 @@ robot_path_t search_for_path(pose_xyt_t start,
             }
         }
     }
+    robot_path_t emptyPath;
+    emptyPath.utime = start.utime;
+    emptyPath.path_length = 0;
+    emptyPath.path.push_back(start);
+    return emptyPath;
 }
