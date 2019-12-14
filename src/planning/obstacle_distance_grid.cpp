@@ -9,123 +9,44 @@ ObstacleDistanceGrid::ObstacleDistanceGrid(void)
 void ObstacleDistanceGrid::setDistances(const OccupancyGrid &map)
 {
     resetGrid(map);
-    int obs_thre = 20;
 
-    for (int y = 0; y < map.heightInCells(); ++y)
+    ///////////// TODO: Implement an algorithm to mark the distance to the nearest obstacle for every cell in the map.
+    for (int i = 0; i < width_; i++)
     {
-        for (int x = 0; x < map.widthInCells(); ++x)
+        for (int j = 0; j < height_; j++)
         {
-            if (map(x, y) > 0)
-            {
-                cells_[cellIndex(x, y)] = 0.0f;
-            }
-            if (map(x, y) == 0)
-            {
-                cells_[cellIndex(x, y)] = 0.0f;
-            }
-            if (map(x, y) < 0)
-            {
-                int dis = map.widthInCells() * map.widthInCells() + map.heightInCells() * map.heightInCells();
-                for (int x_m = 1; x - x_m > 0; x_m++)
+            //std::cout<<i<<" "<<j<<" "<<findDistance(i,j, map) * metersPerCell_ <<std::endl;
+            distance(i, j) = findDistance(i, j, map) * metersPerCell_;
+        }
+    }
+}
+
+float ObstacleDistanceGrid::findDistance(int x, int y, const OccupancyGrid &map)
+{
+    // this can probably be heavily optimized by keeping a set of occupied cells
+    //Note: the distance is in grid scale (not meters)
+    //std::cout<<"x, y: "<<x<<" "<<y<<std::endl;
+    if (map.logOdds(x, y) == 0)
+        return 0; //Cell unknown
+
+    float min_distance = std::numeric_limits<float>::max();
+    for (int i = 0; i < map.widthInCells(); ++i)
+    {
+        for (int j = 0; j < map.heightInCells(); ++j)
+        {
+            //std::cout<<"i, j: "<<i<<" "<<j<<std::endl;
+            if (map.logOdds(i, j) > -5)
+            { //occupied
+                float temp_distance = sqrt(pow(x - i, 2) + pow(y - j, 2));
+                if (temp_distance < min_distance)
                 {
-                    for (int y_p = 1; y + y_p < map.heightInCells(); y_p++)
-                    {
-                        if (map(x - x_m, y + y_p) > obs_thre)
-                        {
-                            if (dis > x_m * x_m + y_p * y_p)
-                            {
-                                dis = x_m * x_m + y_p * y_p;
-                            }
-                            break;
-                        }
-                    }
-                    for (int y_m = 1; y - y_m > 0; y_m++)
-                    {
-                        if (map(x - x_m, y - y_m) > obs_thre)
-                        {
-                            if (dis > x_m * x_m + y_m * y_m)
-                            {
-                                dis = x_m * x_m + y_m * y_m;
-                            }
-                            break;
-                        }
-                    }
-                    break;
+                    min_distance = temp_distance;
                 }
-                for (int x_p = 1; x + x_p < map.widthInCells(); x_p++)
-                {
-                    for (int y_p = 1; y + y_p < map.heightInCells(); y_p++)
-                    {
-                        if (map(x + x_p, y + y_p) > obs_thre)
-                        {
-                            if (dis > x_p * x_p + y_p * y_p)
-                            {
-                                dis = x_p * x_p + y_p * y_p;
-                            }
-                            break;
-                        }
-                    }
-                    for (int y_m = 1; y - y_m > 0; y_m++)
-                    {
-                        if (map(x + x_p, y - y_m) > obs_thre)
-                        {
-                            if (dis > x_p * x_p + y_m * y_m)
-                            {
-                                dis = x_p * x_p + y_m * y_m;
-                            }
-                            break;
-                        }
-                    }
-                    break;
-                }
-                for (int y_p = 1; y + y_p < map.heightInCells(); y_p++)
-                {
-                    if (map(x, y + y_p) > obs_thre)
-                    {
-                        if (dis > y_p * y_p)
-                        {
-                            dis = y_p * y_p;
-                        }
-                        break;
-                    }
-                }
-                for (int y_m = 1; y - y_m > 0; y_m++)
-                {
-                    if (map(x, y - y_m) > obs_thre)
-                    {
-                        if (dis > y_m * y_m)
-                        {
-                            dis = y_m * y_m;
-                        }
-                        break;
-                    }
-                }
-                for (int x_p = 1; x + x_p < map.widthInCells(); x_p++)
-                {
-                    if (map(x + x_p, y) > obs_thre)
-                    {
-                        if (dis > x_p * x_p)
-                        {
-                            dis = x_p * x_p;
-                        }
-                        break;
-                    }
-                }
-                for (int x_m = 1; x - x_m > 0; x_m++)
-                {
-                    if (map(x - x_m, y) > obs_thre)
-                    {
-                        if (dis > x_m * x_m)
-                        {
-                            dis = x_m * x_m;
-                        }
-                        break;
-                    }
-                }
-                cells_[cellIndex(x, y)] = sqrt(dis) * map.metersPerCell();
             }
         }
     }
+    //std::cout<<x<<" "<<y<<" "<<min_distance * metersPerCell_<<std::endl;
+    return min_distance;
 }
 
 bool ObstacleDistanceGrid::isCellInGrid(int x, int y) const

@@ -61,15 +61,33 @@ double cost_to_go(int newX,int newY,double step){
 robot_path_t construct_path(Node *currentNode, robot_path_t path, const ObstacleDistanceGrid &distances)
 {
     pose_xyt_t setpoints;
+    int itr=0;
+    int itr2=0;
+    float theta_prev= 0;
+    float x_prev = 0;
+    float y_prev = 0;
+
     // Node *trackNode = currentNode;
     while(currentNode->p != nullptr){
         // std::cin.get();
+        itr++;
+        itr2++;
         setpoints.x = roundit(grid_position_to_global_position(currentNode->n, distances).x);
         setpoints.y = roundit(grid_position_to_global_position(currentNode->n, distances).y);
-        // std::cout << "added setpoint" << currentNode->n << " sp: " << setpoints.x << "," << setpoints.y << std::endl;
-        ///// TODO: check for theta
-        setpoints.theta = 0;
-        path.path.push_back(setpoints);
+        setpoints.theta = atan2(y_prev - setpoints.y, x_prev - setpoints.x);
+
+        if((itr ==7) || ((fabs(theta_prev-setpoints.theta) > 0.18) && (itr2==2))){
+            path.path.push_back(setpoints);
+            itr =0;
+            itr2 = 0;
+
+        }
+        // std::cout << "added setpoint" << currentNode->n << "fcost:  " << currentNode->f_cost<< std::endl;
+        
+        x_prev = setpoints.x;
+        y_prev = setpoints.y;
+        theta_prev = setpoints.theta;
+
         currentNode = currentNode->p;
     }
     std::reverse(std::begin(path.path), std::end(path.path));
@@ -135,7 +153,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     start_ptr->g_cost = 0;
     start_ptr->f_cost = dist(start_ptr, goal_ptr) + obs_cost(params, distances(start_ptr->n.x, start_ptr->n.y));
 
-    printNode(goal_ptr);
+    // printNode(goal_ptr);
     pq.push(start_ptr);
     open_set.insert(start_ptr);
 
@@ -143,9 +161,11 @@ robot_path_t search_for_path(pose_xyt_t start,
     double step = 1;
     int itr=0;
 
-    
+    // if(isValid(goal_ptr, params, distances)){
+    //     std::cout << "Goal position invalid" << std::endl;
+    // }
 
-    while (open_set.size() > 0)
+        while (open_set.size() > 0)
     {
         // select node
         Node *currentNode = pq.top();
@@ -163,13 +183,6 @@ robot_path_t search_for_path(pose_xyt_t start,
             // print_queue(pq);           // break;
             std::cin.get();
         }
-        // if (itr ==1){
-        //     delete_set(del_set);
-        //     std::cout << "after del:" << del_set[0] << std::endl;
-        //     std::cout << "deleted:" << std::endl; 
-
-        //     break;
-        // }
 
 
         // check destination
@@ -181,6 +194,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             path.path.insert(path.path.begin(),start);
             path.path.push_back(goal);
 
+            // PRINT setpoints
             for(int i;i<path.path.size();++i){
                 std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
             }
@@ -194,18 +208,12 @@ robot_path_t search_for_path(pose_xyt_t start,
         // init neighbors
         double temp_g_cost;
 
-        
-        
-        // std::unique_ptr<Node[]> n_ptr(new Node(neighbor_pt, nullptr, 0)[8]);
-
         // 8 -connected
         for (int newX = -1; newX <= 1; newX++)
         {
             for (int newY = -1; newY <= 1; newY++)
             {
                 if (newX == 0 && newY ==0){continue;} // ignoring currentNode
-
-                // Point<double> neighbor_pt(0, 0);
 
                 // Node *n_ptr;
                 Point<int> neighbor_pt(currentNode->n.x + step * newX, currentNode->n.y + step * newY);
@@ -242,6 +250,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                         // std::cout << n_ptr->p->n << currentNode->n << std::endl;
                         n_ptr->g_cost = temp_g_cost;
                         n_ptr->f_cost = n_ptr->g_cost + dist(currentNode,goal_ptr) + obs_cost(params, distances(n_ptr->n.x,n_ptr->n.y));
+                        // std::cout << "obs_cost: " << pow(params.maxDistanceWithCost - distances(start_ptr->n.x, start_ptr->n.y),params.distanceCostExponent) << std::endl;
                         // + obs_cost(params, distances(grid_position_to_global_position(n_ptr->n,distances).x,grid_position_to_global_position(n_ptr->n,distances).y));
                         // std::cout << "can find" << (open_set.find(&n_ptr-> == open_set.end())<< std::endl;
                         if (open_set.find(n_ptr) == open_set.end())
