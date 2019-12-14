@@ -44,9 +44,7 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 		float range = ad_ray.range;
 		float theta = ad_ray.theta; // This is the global frame theta!
 			//cout<<i<<" "<<x0<<" "<<y0<<" "<<range<<" "<<theta<<endl;
-		if(range > kMaxLaserDistance_){
-		     continue;
-	  	}
+
 		// End of laser scan in world frame
 		auto Cell1 = global_position_to_grid_cell(Point<float>(ad_ray.origin.x + range*cos(theta), ad_ray.origin.y + range*sin(theta)), map);
 		int x1 = Cell1.x;
@@ -79,6 +77,10 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
 					y += sy;
 				}
 		}
+
+		if(range > kMaxLaserDistance_){
+				 continue;
+			}
 		new_logOdd = map.logOdds(x1,y1) +  kHitOdds_;
 		new_logOdd = new_logOdd > 127 ? 127: new_logOdd;
 		map.setLogOdds(x1,y1, new_logOdd);

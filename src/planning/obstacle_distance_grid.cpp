@@ -2,7 +2,10 @@
 #include <slam/occupancy_grid.hpp>
 
 ObstacleDistanceGrid::ObstacleDistanceGrid(void)
-    : width_(0), height_(0), metersPerCell_(0.05f), cellsPerMeter_(20.0f)
+: width_(0)
+, height_(0)
+, metersPerCell_(0.05f) //changed from 0.025f
+, cellsPerMeter_(20.0f) //changed from 40.0f
 {
 }
 
@@ -30,7 +33,7 @@ float ObstacleDistanceGrid::findDistance(int x, int y, const OccupancyGrid& map)
   for (int i = 0; i < map.widthInCells(); ++i) {
     for (int j = 0; j < map.heightInCells(); ++j) {
       //std::cout<<"i, j: "<<i<<" "<<j<<std::endl;
-      if (map.logOdds(i, j) >-5) { //occupied
+      if (map.logOdds(i, j) >0) { //occupied
         float temp_distance = sqrt(pow(x - i, 2) + pow(y - j, 2));
         if (temp_distance < min_distance)
         {

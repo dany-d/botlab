@@ -233,8 +233,14 @@ bool test_saved_poses(const std::string &mapFile, const std::string &posesFile, 
         
 =======
 
+<<<<<<< HEAD
         std::cout<<"start x: "<<start.x<<" y: "<< start.y<<" goal x: "<<goal.x<<" y: "<<goal.y<<std::endl;
         
+>>>>>>> exploration
+||||||| merged common ancestors
+        std::cout<<"start x: "<<start.x<<" y: "<< start.y<<" goal x: "<<goal.x<<" y: "<<goal.y<<std::endl;
+        
+=======
 >>>>>>> exploration
         robot_path_t path = timed_find_path(start, goal, planner, testName);
         if (!animatePath && useGui)

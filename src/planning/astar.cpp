@@ -1,3 +1,8 @@
+#include "queue"
+#include "unordered_set"
+#include "stack"
+#include "algorithm"
+
 #include <planning/astar.hpp>
 #include <planning/obstacle_distance_grid.hpp>
 #include <lcmtypes/particle_t.hpp>
