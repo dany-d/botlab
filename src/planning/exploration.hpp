@@ -75,7 +75,10 @@ public:
     void handleMap(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const occupancy_grid_t* map);
     void handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const pose_xyt_t* pose);
     void handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm);
+
+    // ADDED
     void handleBlock(const lcm::ReceiveBuffer *rbuf, const std::string &channel, const mbot_arm_block_list_t *blocklist);
+    void handleBlockConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm);
 
 private:
     
@@ -101,7 +104,10 @@ private:
     bool haveNewPose_;                  // Flag indicating if a new pose has been received since the last call to copyDataForUpdate
     bool haveNewMap_;                   // Flag indicating if a new map has been received since the last call to copyDataForUpdate
     bool haveHomePose_;                 // Flag indicating if the home pose has been set
-    bool haveNewBlocks_;                // Flag indicating if the home pose has been set
+    bool haveNewBlocks_;                // Flag indicating if the new blocks have been see
+    bool new_block_pickup_status;           // Checks if there are new messages for block pick up status
+
+    bool block_pickup_status; // Tell if the block has been picked up
 
     lcm::LCM* lcmInstance_;             // Instance of LCM to use for sending out information
     std::mutex dataLock_;               // Lock to keep the LCM and explore threads properly synchronized
@@ -144,6 +150,8 @@ private:
     int8_t executeBlockDetection(bool initialize);
     int8_t executeGrabPlanner(bool initialize);
     int8_t executeGrabBlock(bool initialize);
+    int8_t executeDropBlock(bool initialize);
+    
     /////////////////////////// End student code ///////////////////////////////
 };
 

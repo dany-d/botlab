@@ -31,6 +31,7 @@ Exploration::Exploration(int32_t teamNumber,
 , lcmInstance_(lcmInstance)
 , pathReceived_(true)
 , haveNewBlocks_(false)
+, new_block_pickup_status(false)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
@@ -38,6 +39,7 @@ Exploration::Exploration(int32_t teamNumber,
     lcmInstance_->subscribe(SLAM_POSE_CHANNEL, &Exploration::handlePose, this);
     lcmInstance_->subscribe(MESSAGE_CONFIRMATION_CHANNEL, &Exploration::handleConfirmation, this);
     lcmInstance_->subscribe(MBOT_ARM, &Exploration::handleBlock, this);
+    lcmInstance_->subscribe(ARM_GRAB_BLOCK, &Exploration::handleBlockConfirmation, this);
     
     // Send an initial message indicating that the exploration module is initializing. Once the first map and pose are
     // received, then it will change to the exploring map state.
@@ -107,6 +109,13 @@ void Exploration::handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::
     if(confirm->channel == CONTROLLER_PATH_CHANNEL && confirm->creation_time == most_recent_path_time) pathReceived_ = true;
 }
 
+void Exploration::handleBlockConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm)
+{
+    std::lock_guard<std::mutex> autoLock(dataLock_);
+    if(confirm->channel == ARM_GRAB_BLOCK) 
+        new_block_pickup_status = true;
+}
+
 bool Exploration::isReadyToUpdate(void)
 {
     std::lock_guard<std::mutex> autoLock(dataLock_);
@@ -132,6 +141,12 @@ void Exploration::copyDataForUpdate(void)
     {
         currentMap_ = incomingMap_;
         haveNewMap_ = false;
+    }
+
+    if(new_block_pickup_status)
+    {
+        block_pickup_status = new_block_pickup_status;
+        new_block_pickup_status = false;
     }
     
     // Always copy the pose because it is a cheap copy
@@ -191,6 +206,8 @@ void Exploration::executeStateMachine(void)
             case exploration_status_t::STATE_DROP_BLOCK:
                 nextState = executeDropBlock(stateChanged);
                 break;
+
+            // Add State for if the block was not detected
                 
             case exploration_status_t::STATE_RETURNING_HOME:
                 nextState = executeReturningHome(stateChanged);
@@ -266,19 +283,7 @@ int8_t Exploration::executeInitializing(void)
 
 int8_t Exploration::executeExploringMap(bool initialize)
 {
-    planner_.setMap(currentMap_);
-    frontiers_ = find_map_frontiers(currentMap_, currentPose_);
-    if (frontiers_.size() > 0)
-    {
-        std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
-        if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || frontiers_.size() != prev_frontier_size)
-        {
-            prev_frontier_size = frontiers_.size();
-            currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
-            currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
-        }
-    }
-    //////////////////////// TODO: Implement your method for exploring the map ///////////////////////////
+        //////////////////////// TODO: Implement your method for exploring the map ///////////////////////////
     /*
     * NOTES:
     *   - At the end of each iteration, then (1) or (2) must hold, otherwise exploration is considered to have failed:
@@ -292,10 +297,22 @@ int8_t Exploration::executeExploringMap(bool initialize)
     *           explored more of the map.
     *       -- You will likely be able to see the frontier before actually reaching the end of the path leading to it.
     */
-	planner_.setMap(currentMap_);
-    frontiers_=find_map_frontiers(currentMap_, currentPose_, 0.35);
 
-    currentPath_=plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+
+    planner_.setMap(currentMap_);
+    frontiers_ = find_map_frontiers(currentMap_, currentPose_);
+    if (frontiers_.size() > 0)
+    {
+        std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
+        if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || frontiers_.size() != prev_frontier_size)
+        {
+            prev_frontier_size = frontiers_.size();
+            currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+            currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+        }
+    }
+
+    most_recent_path_time = currentPath_.utime;
                                 
     /////////////////////////////// End student code ///////////////////////////////
     
@@ -351,51 +368,85 @@ int8_t Exploration::executeBlockDetection(bool initialize)
     detectblock.utime = utime_now();
     detectblock.mbot_cmd = 1;
 
+    std::cout<<"executeBlockDetection: Command sent to camera to detect blocks\n";
     lcmInstance_->publish(COMMAND_ARM, &detectblock);
 
-    return exploration_status_t::STATUS_IN_PROGRESS;
+    // Return type may not be correct
+    return exploration_status_t::STATE_PLAN_TO_GRAB_LOC;
 }
 
 int8_t Exploration::executeGrabPlanner(bool initialize)
 {
     
-    // Stay in the completed state forever because exploration only explores a single map.
     mbot_arm_block_list_t currentblocklist_;
 
-    // int8_t n_blocks = detectblock.num_blocks;
-    blockPose_ = currentblocklist_.blocks[0].pose;
+    // Only execute below commands if number of blocks is > 0
 
-    // Added by Salman
-    currentPath_=planner_.planPath(currentPose_, blockPose_);
-    path = currentPath_;
+    if (currentblocklist_.num_blocks>1){
+        // int8_t n_blocks = detectblock.num_blocks;
+        // Taking the first block in the list
+        // Should probably change to the nearest block in the list
+        std::cout<<"executeGrabPlanner: block available for pick up\n";
+        blockPose_ = currentblocklist_.blocks[0].pose;
 
-    int itr = path.path.size();
-    while (itr != 1)
-    {
-        // int a = path.path[itr].x;
-        if(sqrt((path.path[itr].x - blockPose_.x)*(path.path[itr].x - blockPose_.x) + (path.path[itr].y - blockPose_.y)*(path.path[itr].y - blockPose_.y)) < 0.15){
-            --itr;
+        // Added by Salman
+        // The block pose is with reference to the robot camera frame
+        // Need to convert that to the global frame for the planner
+        
+        pose_xyt_t desiredPose;
+
+        // Go to the block location (Ideally we want some distance away from block location)
+        desiredPose.x=currentPose_.x+blockPose_.x;
+        desiredPose.y=currentPose_.y+blockPose_.y;
+        desiredPose.theta=atan2(blockPose_.y, blockPose_.x);
+
+        // TODO: Check if the path is also safe
+        currentPath_=planner_.planPath(currentPose_, desiredPose);
+        path = currentPath_;
+
+        int itr = path.path.size();
+        while (itr != 1)
+        {
+            // int a = path.path[itr].x;
+            if(sqrt((path.path[itr].x - blockPose_.x)*(path.path[itr].x - blockPose_.x) + (path.path[itr].y - blockPose_.y)*(path.path[itr].y - blockPose_.y)) < 0.15){
+                --itr;
+            }
         }
+        path.path.resize(path.path.size()-itr);
+
+        lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &path);
+
+        return exploration_status_t::STATE_GRAB_BLOCK;  
     }
-    path.path.resize(path.path.size()-itr);
 
-    lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &path);
+    std::cout<<"executeGrabPlanner: No block available for pick up\n";
+    return exploration_status_t::STATE_GRAB_BLOCK;  
 
-    return exploration_status_t::STATE_GRAB_BLOCK;
 }
 
 
 int8_t Exploration::executeGrabBlock(bool initialize)
 {
-    status.state = exploration_status_t::STATE_RETURNING_HOME;
+    do{
+    //status.state = exploration_status_t::STATE_RETURNING_HOME;
     mbot_arm_cmd_t detectblock;
     detectblock.utime = utime_now();
     detectblock.mbot_cmd = 3;
 
     lcmInstance_->publish(COMMAND_ARM, &detectblock);
+    }while(!block_pickup_status);
 
-    // return exploration_status_t::STATE_COMPLETED_EXPLORATION;
-    return 0;
+    // Need to check if the message confirmation was received
+
+    return exploration_status_t::STATE_RETURNING_HOME;
+    //return 0;
+}
+
+int8_t Exploration::executeDropBlock(bool initialize)
+{
+
+    return exploration_status_t::STATE_COMPLETED_EXPLORATION;
+    //return 0;
 }
 
 int8_t Exploration::executeReturningHome(bool initialize)
@@ -407,25 +458,14 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
-<<<<<<< HEAD
     planner_.setMap(currentMap_);
     planner_.setNumFrontiers(0);
-    if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || sqrt((homePose_.x - currentTarget_.x) * (homePose_.x - currentTarget_.x) + (homePose_.y - currentTarget_.y) * (homePose_.y - currentTarget_.y)) < 0.1)
-    {
-        // currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
-        currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+    if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
+      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))>kReachedPositionThreshold){
+        currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
+        currentTarget_ =  currentPath_.path[currentPath_.path_length-1];
     }
-    std::cout << "Path length to home: " << currentPath_.path.size() << "\n";
-||||||| merged common ancestors
-    
-
-
-=======
-    
-    // planner_.setMap(currentMap_);
-    currentPath_=planner_.planPath(currentPose_, homePose_);
-
->>>>>>> 76bf9b3d2f7274bb8da25b5f3b6fef4deac6b700
+    std::cout<<"Path length to home: "<<currentPath_.path.size()<<"\n";
     /////////////////////////////// End student code ///////////////////////////////
 
     /////////////////////////   Create the status message    //////////////////////////
@@ -443,7 +483,6 @@ int8_t Exploration::executeReturningHome(bool initialize)
         std::cout << "Returning complete.\n";
     }
     // Otherwise, if there's a path, then keep following it
-<<<<<<< HEAD
     else if (currentPath_.path.size() >= 1)
     {
         status.status = exploration_status_t::STATUS_IN_PROGRESS;
@@ -451,31 +490,10 @@ int8_t Exploration::executeReturningHome(bool initialize)
     // Else, there's no valid path to follow and we aren't home, so we have failed.
     else
     {
-||||||| merged common ancestors
-    else if(currentPath_.path.size() > 1)
-    {
-        status.status = exploration_status_t::STATUS_IN_PROGRESS;
-    }
-    // Else, there's no valid path to follow and we aren't home, so we have failed.
-    else
-    {
-=======
-    else if(currentPath_.path.size() >= 1)
-	{
->>>>>>> 76bf9b3d2f7274bb8da25b5f3b6fef4deac6b700
         status.status = exploration_status_t::STATUS_FAILED;
-<<<<<<< HEAD
         std::cout << "No vaild path and not reached home.\n";
     }
 
-||||||| merged common ancestors
-    }
-    
-=======
-	}
- 
-    
->>>>>>> 76bf9b3d2f7274bb8da25b5f3b6fef4deac6b700
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
 
     ////////////////////////////   Determine the next state    ////////////////////////

@@ -68,6 +68,27 @@ class exploration_status_t
         // static data member then re-run lcm-gen with '--cpp-std=c++11'
         // to generate code that is compliant with C++11
         static const int8_t   STATE_FAILED_EXPLORATION = 4;
+        /// New added states
+        // If you're using C++11 and are getting compiler errors saying
+        // things like ‘constexpr’ needed for in-class initialization of
+        // static data member then re-run lcm-gen with '--cpp-std=c++11'
+        // to generate code that is compliant with C++11
+        static const int8_t   STATE_DETECT_BLOCKS = 5;
+        // If you're using C++11 and are getting compiler errors saying
+        // things like ‘constexpr’ needed for in-class initialization of
+        // static data member then re-run lcm-gen with '--cpp-std=c++11'
+        // to generate code that is compliant with C++11
+        static const int8_t   STATE_PLAN_TO_GRAB_LOC = 6;
+        // If you're using C++11 and are getting compiler errors saying
+        // things like ‘constexpr’ needed for in-class initialization of
+        // static data member then re-run lcm-gen with '--cpp-std=c++11'
+        // to generate code that is compliant with C++11
+        static const int8_t   STATE_GRAB_BLOCK = 7;
+        // If you're using C++11 and are getting compiler errors saying
+        // things like ‘constexpr’ needed for in-class initialization of
+        // static data member then re-run lcm-gen with '--cpp-std=c++11'
+        // to generate code that is compliant with C++11
+        static const int8_t   STATE_DROP_BLOCK = 8;
         // If you're using C++11 and are getting compiler errors saying
         // things like ‘constexpr’ needed for in-class initialization of
         // static data member then re-run lcm-gen with '--cpp-std=c++11'
