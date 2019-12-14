@@ -153,7 +153,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
     // Finding the frontier closest to us
     for(unsigned int i=0; i<frontiers.size(); i++){
         pose_xyt_t goalPose;
-        
+
         goalPose.x = 0;
         goalPose.y = 0;
 
@@ -165,7 +165,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
         goalPose.x/= frontiers[i].cells.size();
         goalPose.y/= frontiers[i].cells.size();
 
-        if (min < sqrt(pow(goalPose.x,2)+pow(goalPose.x,2)))
+        if (min > sqrt(pow(goalPose.x,2)+pow(goalPose.x,2)))
         {
           min=sqrt(pow(goalPose.x,2)+pow(goalPose.x,2));
           desiredPose.x=goalPose.x;
@@ -186,17 +186,17 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
         m=-1/m;
 
         // This line must pass through the centroid of the contour
-        // Intercept of this line is 
+        // Intercept of this line is
         float c= desiredPose.y - desiredPose.x*m;
         pose_xyt_t goalPose2;
 
         // First moving in postive x direction
 
         for (unsigned int x=0; x<10; x++){
-          goalPose2.x = desiredPose.x+x;
+          goalPose2.x = desiredPose.x+x*map.metersPerCell();
           goalPose2.y = m*goalPose2.x+c;
           std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
-          
+
           if(planner.isValidGoal(goalPose2)){
             //std::cout<<"Valid goal.\n";
             robot_path_t path;
@@ -211,11 +211,11 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
 
         // Second moving in negative x direction
 
-        for (unsigned int x=-1; x>-11; x--){
-          goalPose2.x = desiredPose.x+x;
+        for (int x=-1; x>-11; x--){
+          goalPose2.x = desiredPose.x+x*map.metersPerCell();
           goalPose2.y = m*goalPose2.x+c;
           std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
-          
+
           if(planner.isValidGoal(goalPose2)){
             //std::cout<<"Valid goal.\n";
             robot_path_t path;
@@ -229,7 +229,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
         }
 
 
-        
+
     //     goalPose2.x  = desiredPose.x;
     //     goalPose2.y  = desiredPose.y;
     //   for (int l=0; l<L; ++l){

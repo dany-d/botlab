@@ -39,7 +39,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     Node dest_node = Node(end_point, nullptr,0);
     Point<int> start_point = distances.poseToCell(start.x, start.y);
     Node* start_node = new Node(start_point, nullptr,0);
-    start_node->f_score =  calculateHscore(*start_node, dest_node, distances, params);
+    start_node->f_score =  calculateHscore(*start_node, dest_node, distances, params) + obstacleCost(*start_node, distances, params);
     open_set.insert(start_node);
     std::cout<<"search start (Cell): "<<start_node->n.x<<" "<<start_node->n.y<<" goal: "<<dest_node.n.x<<" "<<dest_node.n.y<<std::endl;
 
@@ -70,6 +70,8 @@ robot_path_t search_for_path(pose_xyt_t start,
         if (distances(neighbours[i].x, neighbours[i].y)>params.minDistanceToObstacle){
           //std::cout<<"Neighbour #"<<i<<": "<<neighbours[i].x<<" "<<neighbours[i].y<<std::endl;
           Node* n = new Node(neighbours[i], cur, cur->g_score+metersPerCell);
+          n->g_score -= obstacleCost(*cur, distances, params);
+          n->g_score += obstacleCost(*n, distances, params);
           if(i>=4){
             n->g_score += (sqrt(2) - 1)*metersPerCell;
           }
@@ -98,6 +100,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     pose_xyt_t first;
     first.x = goal.x;
     first.y = goal.y;
+    int cnt=0;
     if(isDestinationReached(*cur, dest_node)){
       while(cur!=nullptr){
           //if(i==sparser){
@@ -108,14 +111,17 @@ robot_path_t search_for_path(pose_xyt_t start,
             //cur_pose.theta = 0;
             //std::cout<<"First Pose: "<<first.x<<" "<<first.y<<std::endl;
             //std::cout<<"Second Pose: "<<second.x<<" "<<second.y<<std::endl;
-            if(!IsPathFree(first, second, distances, params)){
+            cnt++;
+            if(!IsPathFree(first, second, distances, params) || cnt==7){
               path.path.push_back(second);
               first.x = second.x;
               first.y = second.y;
+              cnt=0;
             }
         cur = cur->p;
       }
       path.path.push_back(start);
+      //path.path.push_back(start);
       std::reverse(path.path.begin(), path.path.end());
       path.path.push_back(goal);
       path.path_length = path.path.size();
@@ -132,7 +138,10 @@ robot_path_t search_for_path(pose_xyt_t start,
     }
 
     std::cout<<"Path returned. Length: "<<path.path_length<<std::endl;
-
+    for(unsigned int i=0; i<path.path.size(); ++i){
+      std::cout<<path.path[i].x<<" ";
+    }
+    std::cout<<std::endl;
     //std::cout<<(*iter)->n.x<<" "<<(*iter)->n.y<<" "<<(*iter)->f_score<<std::endl;
     return path;
 }
@@ -174,7 +183,6 @@ bool IsPathFree(pose_xyt_t first, pose_xyt_t second,
         }
     }
     return true;
-
 }
 
 
@@ -188,11 +196,17 @@ float calculateHscore(const Node &n, const Node &dest,
                              const SearchParams& params){
   float h = distance_between_points(n.n, dest.n);
   h *= distances.metersPerCell();
-  float cellDistance = distances(n.n.x, n.n.y);
-  if(cellDistance > params.minDistanceToObstacle
-     && cellDistance < params.maxDistanceWithCost){
-       //std::cout<<h<<" "<<pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent)<<std::endl;
-       h +=  pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent);
-     }
   return h;
+}
+
+float obstacleCost(const Node &n, const ObstacleDistanceGrid& distances, const SearchParams& params){
+   float cellDistance = distances(n.n.x, n.n.y);
+   if(cellDistance > params.minDistanceToObstacle
+      && cellDistance < params.maxDistanceWithCost){
+        //std::cout<<h<<" "<<pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent)<<std::endl;
+      return pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent);
+      }
+   else{
+     return 0;
+   }
 }

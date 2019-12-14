@@ -4,7 +4,7 @@
 
 const float kGridWidth = 15.0f;
 const float kGridHeight = 15.0f;
-const float kMetersPerCell = 0.025f; //changed from 0.05f
+const float kMetersPerCell = 0.05f; //changed from 0.025f
 
 OccupancyGrid generate_uniform_grid(int8_t logOdds);
 OccupancyGrid generate_constricted_grid(double openingWidth);

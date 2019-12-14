@@ -9,7 +9,7 @@ using namespace std;
 OccupancyGrid::OccupancyGrid(void)
 : width_(0)
 , height_(0)
-, metersPerCell_(0.025f) //changed from 0.05
+, metersPerCell_(0.05f) //changed from 0.025
 , cellsPerMeter_(1.0 / metersPerCell_)
 , globalOrigin_(0, 0)
 {

@@ -88,4 +88,5 @@ float calculateHscore(const Node &n, const Node &dest,
                              const SearchParams& params);
 
 
+float obstacleCost(const Node &n, const ObstacleDistanceGrid& distances,const SearchParams& params);
 #endif // PLANNING_ASTAR_HPP

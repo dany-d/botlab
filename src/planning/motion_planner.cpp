@@ -72,7 +72,7 @@ bool MotionPlanner::isValidGoal(const pose_xyt_t& goal) const
     //std::cout<<"not in grid\n";
 
     // A goal must be in the map for the robot to reach it
-    return false;
+    return true;
 }
 
 
@@ -111,6 +111,6 @@ void MotionPlanner::setMap(const OccupancyGrid& map)
 void MotionPlanner::setParams(const MotionPlannerParams& params)
 {
     searchParams_.minDistanceToObstacle = params_.robotRadius;
-    searchParams_.maxDistanceWithCost = 5.0 * searchParams_.minDistanceToObstacle;
-    searchParams_.distanceCostExponent = 3.0;
+    searchParams_.maxDistanceWithCost = 1.5 * searchParams_.minDistanceToObstacle;
+    searchParams_.distanceCostExponent = -5.0;
 }
