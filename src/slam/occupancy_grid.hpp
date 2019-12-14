@@ -119,9 +119,7 @@ public:
     *           then 0 is returned. This is equivalent to the log-odds of an unobserved cell in the map.
     */
     CellOdds logOdds(int x, int y) const;
-
-    int metersToCellX(float x) const;
-    int metersToCellY(float x) const;
+    
     /**
     * setLogOdds sets the log-odds of occupancy for the specified cell if the cell falls within the grid boundary. If the
     * cell doesn't fall within the boundary, then nothing happens.

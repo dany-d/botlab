@@ -3,9 +3,15 @@
 
 #include <lcmtypes/robot_path_t.hpp>
 #include <lcmtypes/pose_xyt_t.hpp>
+<<<<<<< HEAD
 #include <common/point.hpp>
 
 #include <limits>
+||||||| merged common ancestors
+=======
+#include <stack>
+#include <vector>
+>>>>>>> exploration
 
 class ObstacleDistanceGrid;
 
