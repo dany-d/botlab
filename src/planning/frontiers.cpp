@@ -141,46 +141,117 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
     robot_path_t emptyPath;
     emptyPath.utime = robotPose.utime;
     emptyPath.path_length = 0;
+
+    float min=100000; // Created to find the frontier closest to us
+    int min_index=0; // To store the index of the closest frontier
+
     //std::cout<<"Map info (w,h): "<<map.widthInMeters()<<" "<<map.heightInMeters()<<" "<<map.heightInCells()<<" "<<map.widthInCells()<<std::endl;
     int L = 10;
+
+    pose_xyt_t desiredPose;
+
+    // Finding the frontier closest to us
     for(unsigned int i=0; i<frontiers.size(); i++){
         pose_xyt_t goalPose;
+        
         goalPose.x = 0;
         goalPose.y = 0;
+
+        // Iterating through the cells inside one frontier and calculating median
         for(unsigned int j=0; j<frontiers[i].cells.size(); j++){
           goalPose.x += frontiers[i].cells[j].x;
           goalPose.y += frontiers[i].cells[j].y;
         }
         goalPose.x/= frontiers[i].cells.size();
         goalPose.y/= frontiers[i].cells.size();
-        std::cout<<"Mean of frontiers: " <<  goalPose.x <<" "<<goalPose.y<<std::endl;
 
-        //goalPose.x = 0.5*(robotPose.x + goalPose.x);
-        //goalPose.y = 0.5*(robotPose.y + goalPose.y);
+        if (min < sqrt(pow(goalPose.x,2)+pow(goalPose.x,2)))
+        {
+          min=sqrt(pow(goalPose.x,2)+pow(goalPose.x,2));
+          desiredPose.x=goalPose.x;
+          desiredPose.y=goalPose.y;
+          min_index=i;
+        }
 
+        std::cout<<"Closest frontier x and y coordinate are: " <<  desiredPose.x <<" "<< desiredPose.y<<std::endl;
+      }
+
+
+    // Calculating the equation of line perpendicular to current set of points
+
+        int num_of_cells = frontiers[min_index].cells.size()-1;
+        // Slope of the line passing through the closest frontier
+        float m= (frontiers[min_index].cells[num_of_cells].x - frontiers[min_index].cells[0].x)/(frontiers[min_index].cells[num_of_cells].y - frontiers[min_index].cells[0].y);
+        // Find the slope of line perpendicular to original line
+        m=-1/m;
+
+        // This line must pass through the centroid of the contour
+        // Intercept of this line is 
+        float c= desiredPose.y - desiredPose.x*m;
         pose_xyt_t goalPose2;
-        goalPose2.x  = goalPose.x;
-        goalPose2.y  = goalPose.y;
-      for (int l=0; l<L; ++l){
-        for (int m=0; m<l; ++m){
-          for (int n=0; n<l; ++n){
-            goalPose2.x = goalPose.x + (m-l/2)*map.metersPerCell();
-            goalPose2.y = goalPose.y + (n-l/2)*map.metersPerCell();
-            //std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
-            if(planner.isValidGoal(goalPose2)){
-              //std::cout<<"Valid goal.\n";
-              robot_path_t path;
-              path = planner.planPath(robotPose, goalPose2);
-              //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
-              if(planner.isPathSafe(path) && path.path_length!=0){
-                std::cout<<"A path to frontier is returned.\n";
-                return path;
-              }
+
+        // First moving in postive x direction
+
+        for (unsigned int x=0; x<10; x++){
+          goalPose2.x = desiredPose.x+x;
+          goalPose2.y = m*goalPose2.x+c;
+          std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
+          
+          if(planner.isValidGoal(goalPose2)){
+            //std::cout<<"Valid goal.\n";
+            robot_path_t path;
+            path = planner.planPath(robotPose, goalPose2);
+            //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
+            if(planner.isPathSafe(path) && path.path_length!=0){
+              std::cout<<"A path to frontier is returned.\n";
+              return path;
             }
           }
         }
-      }
-    }
+
+        // Second moving in negative x direction
+
+        for (unsigned int x=-1; x>-11; x--){
+          goalPose2.x = desiredPose.x+x;
+          goalPose2.y = m*goalPose2.x+c;
+          std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
+          
+          if(planner.isValidGoal(goalPose2)){
+            //std::cout<<"Valid goal.\n";
+            robot_path_t path;
+            path = planner.planPath(robotPose, goalPose2);
+            //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
+            if(planner.isPathSafe(path) && path.path_length!=0){
+              std::cout<<"A path to frontier is returned.\n";
+              return path;
+            }
+          }
+        }
+
+
+        
+    //     goalPose2.x  = desiredPose.x;
+    //     goalPose2.y  = desiredPose.y;
+    //   for (int l=0; l<L; ++l){
+    //     for (int m=0; m<l; ++m){
+    //       for (int n=0; n<l; ++n){
+    //         goalPose2.x = goalPose.x + (m-l/2)*map.metersPerCell();
+    //         goalPose2.y = goalPose.y + (n-l/2)*map.metersPerCell();
+    //         //std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
+    //         if(planner.isValidGoal(goalPose2)){
+    //           //std::cout<<"Valid goal.\n";
+    //           robot_path_t path;
+    //           path = planner.planPath(robotPose, goalPose2);
+    //           //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
+    //           if(planner.isPathSafe(path) && path.path_length!=0){
+    //             std::cout<<"A path to frontier is returned.\n";
+    //             return path;
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
     std::cout<<"Empty Path returned.\n";
     emptyPath.path.push_back(robotPose);
     return emptyPath;
