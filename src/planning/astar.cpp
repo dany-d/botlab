@@ -98,7 +98,6 @@ robot_path_t search_for_path(pose_xyt_t start,
     pose_xyt_t first;
     first.x = goal.x;
     first.y = goal.y;
-    int cnt=0;
     if(isDestinationReached(*cur, dest_node)){
       while(cur!=nullptr){
           //if(i==sparser){
@@ -138,66 +137,6 @@ robot_path_t search_for_path(pose_xyt_t start,
     return path;
 }
 
-bool plotLineLow(float x0, float y0, float x1, float y1, float minDistanceToObstacle, const ObstacleDistanceGrid &distances)
-{
-    float dx = x1 - x0;
-    float dy = y1 - y0;
-    float yi = 1;
-    if (dy < 0)
-    {
-        yi = -1;
-        dy = -dy;
-    }
-    float D = 2 * dy - dx;
-    float cur_y = y0;
-    float cur_x = x0;
-    for (; cur_x < x1; cur_x += distances.metersPerCell()/2.)
-    {
-      //std::cout<<distances(cur_x, cur_y) <<std::endl;
-      if (distances(floor(cur_x*20 + 100), floor(cur_y*20 + 100)) < minDistanceToObstacle )
-      {
-        //std::cout<<"False\n";
-        return false;
-      }
-        if (D > 0)
-        {
-            cur_y += yi * distances.metersPerCell()/2.;
-            D -= 2 * dx;
-        }
-        D += 2 * dy;
-    }
-    return true;
-}
-bool plotLineHigh(float x0, float y0, float x1, float y1,  float minDistanceToObstacle, const ObstacleDistanceGrid &distances)
-{
-    float dx = x1 - x0;
-    float dy = y1 - y0;
-    float xi = 1;
-    if (dx < 0)
-    {
-        xi = -1;
-        dx = -dx;
-    }
-    float D = 2 * dx - dy;
-    float cur_y = y0;
-    float cur_x = x0;
-    for (; cur_y < y1; cur_y += distances.metersPerCell()/2.)
-    {
-      //std::cout<<distances(cur_x, cur_y) <<std::endl;
-      if (distances(floor(cur_x*20 + 100), floor(cur_y*20 + 100)) < minDistanceToObstacle )
-      {
-        //std::cout<<"False\n";
-        return false;
-      }
-        if (D > 0)
-        {
-            cur_x += xi * distances.metersPerCell()/2.;
-            D -= 2 * dy;
-        }
-        D += 2 * dx;
-    }
-    return true;
-}
 
 bool IsPathFree(pose_xyt_t first, pose_xyt_t second,
                 const ObstacleDistanceGrid& distances, const SearchParams& params){
@@ -206,28 +145,35 @@ bool IsPathFree(pose_xyt_t first, pose_xyt_t second,
     float x1 = second.x;
     float y1 = second.y;
     float minDist =  params.minDistanceToObstacle + distances.metersPerCell();
-    if (std::abs(y1 - y0) < std::abs(x1 - x0))
-    {
-        if (x0 > x1)
-        {
-            return plotLineLow(x1, y1, x0, y0,minDist, distances);
+    float dx = fabs(x1-x0);
+    float dy = fabs(y1-y0);
+    float sx = (x0<x1)? distances.metersPerCell() : -distances.metersPerCell();
+    float sy = (y0<y1)? distances.metersPerCell() : -distances.metersPerCell();
+    float err = dx-dy;
+    float x = x0;
+    float y = y0;
+    while(fabs(x-x1) > distances.metersPerCell()/2.0 || fabs(y-y1) > distances.metersPerCell()/2.0 ){
+      Point<int> p;
+      p = distances.poseToCell(x,y);
+      if (distances(p.x, p.y) < minDist){
+        //std::cout<<p.x<<" "<<p.y<<" "<<distances(p.x, p.y)<<std::endl;
+        return false;
+      }
+      // Computing the next x,y cells through which laser passes using Breshenham's Algorithm
+      float e2 = 2*err;
+      if (e2 >= -dy)
+          {
+          err -= dy;
+          x += sx;
         }
-        else
-        {
-            return plotLineLow(x0, y0, x1, y1,minDist, distances);
+
+      if (e2 <= dx)
+          {
+            err += dx;
+          y += sy;
         }
     }
-    else
-    {
-        if (y0 > y1)
-        {
-            return plotLineHigh(x1, y1, x0, y0, minDist, distances);
-        }
-        else
-        {
-            return plotLineHigh(x0, y0, x1, y1, minDist, distances);
-        }
-    }
+    return true;
 
 }
 
