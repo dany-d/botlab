@@ -39,7 +39,8 @@ robot_path_t search_for_path(pose_xyt_t start,
     Node dest_node = Node(end_point, nullptr,0);
     Point<int> start_point = distances.poseToCell(start.x, start.y);
     Node* start_node = new Node(start_point, nullptr,0);
-    start_node->f_score =  calculateHscore(*start_node, dest_node, distances, params) + obstacleCost(*start_node, distances, params);
+    start_node->g_score = obstacleCost(*start_node, distances, params);
+    start_node->f_score =  calculateHscore(*start_node, dest_node, distances, params) + start_node->g_score;
     open_set.insert(start_node);
     std::cout<<"search start (Cell): "<<start_node->n.x<<" "<<start_node->n.y<<" goal: "<<dest_node.n.x<<" "<<dest_node.n.y<<std::endl;
 
@@ -71,6 +72,8 @@ robot_path_t search_for_path(pose_xyt_t start,
           //std::cout<<"Neighbour #"<<i<<": "<<neighbours[i].x<<" "<<neighbours[i].y<<std::endl;
           Node* n = new Node(neighbours[i], cur, cur->g_score+metersPerCell);
           n->g_score -= obstacleCost(*cur, distances, params);
+          //std::cout<<n->n.x<<" "<<n->n.y<<" "<<distances(n->n.x, n->n.y)<<" Scores (from parent, h): "<<n->g_score<<" "<<calculateHscore(*n, dest_node, distances, params)<<std::endl;
+
           n->g_score += obstacleCost(*n, distances, params);
           if(i>=4){
             n->g_score += (sqrt(2) - 1)*metersPerCell;
@@ -81,7 +84,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             open_set.insert(n);
             pq.push(n);
             //std::cout<<"Top: "<<pq.top()->n.x<<" "<<pq.top()->n.y<<" "<<pq.top()->f_score<<std::endl;
-            //std::cout<<"Scores (f g h): "<<n->f_score<<" "<<n->g_score<<" "<<calculateHscore(*n, *dest_node, distances, params)<<std::endl;
+            //std::cout<<n->n.x<<" "<<n->n.y<<" "<<distances(n->n.x, n->n.y)<<" Scores (g h): "<<n->g_score<<" "<<calculateHscore(*n, dest_node, distances, params)<<std::endl;
           }
           else{
             if(n->g_score < (*iter)->g_score){
@@ -196,14 +199,15 @@ float calculateHscore(const Node &n, const Node &dest,
                              const SearchParams& params){
   float h = distance_between_points(n.n, dest.n);
   h *= distances.metersPerCell();
+  //h*=0.8;
   return h;
 }
 
 float obstacleCost(const Node &n, const ObstacleDistanceGrid& distances, const SearchParams& params){
    float cellDistance = distances(n.n.x, n.n.y);
-   if(cellDistance > params.minDistanceToObstacle
-      && cellDistance < params.maxDistanceWithCost){
-        //std::cout<<h<<" "<<pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent)<<std::endl;
+   // /std::cout<<cellDistance<<" "<<n.n.x<<" "<< n.n.y<<std::endl;
+   if(cellDistance < params.maxDistanceWithCost){
+      //std::cout<<n.g_score<<" "<<n.f_score<<" "<<pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent)<<std::endl;
       return pow(params.maxDistanceWithCost - cellDistance, params.distanceCostExponent);
       }
    else{
