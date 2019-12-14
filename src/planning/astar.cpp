@@ -136,7 +136,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     robot_path_t path;
     
     // path.path.push_back(start);
-
+    std::cout << "planning..." <<std::endl;
     // initialize start node
     std::priority_queue<Node *, std::vector<Node *>, Compare> pq;
     std::unordered_set<Node *, hash, equal> open_set;
@@ -200,9 +200,9 @@ robot_path_t search_for_path(pose_xyt_t start,
             path.path.push_back(goal);
 
             // PRINT setpoints
-            for(int i;i<path.path.size();++i){
-                std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
-            }
+            // for(int i;i<path.path.size();++i){
+            //     std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
+            // }
             delete_set(del_set);
             path.utime = start.utime;
             path.path_length = path.path.size();
@@ -220,15 +220,21 @@ robot_path_t search_for_path(pose_xyt_t start,
             {
                 if (newX == 0 && newY ==0){continue;} // ignoring currentNode
 
+                if (!isValid(currentNode, params, distances))
+                    {
+                        std::cout << "Invalid start, steping bigger..." <<std::endl;
+                        step = 4;
+                }
+
                 // Node *n_ptr;
                 Point<int> neighbor_pt(currentNode->n.x + step * newX, currentNode->n.y + step * newY);
                 // std::cout << "nei - " << (neighbor_pt) << std::endl;
                 // Node neighbor(neighbor_pt, nullptr, 0);
 
-
                 Node* n_ptr = new Node(neighbor_pt,nullptr,0);
                 // n_ptr->n = neighbor_pt;
 
+                del_set.push_back(n_ptr);
                 // std::unique_ptr <Node[]> n_ptr2(new Node(neighbor_pt,nullptr[8]);
                 // std::unique_ptr <Node> n_ptr = std::make_unique(n_ptr);
 
@@ -262,7 +268,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                         {
                             pq.push(std::move(n_ptr));
                             open_set.insert(std::move(n_ptr));
-                            del_set.push_back(n_ptr);
+                            
                             // std::cout << "Node added- " << n_ptr << std::endl;
                         }
                     }
@@ -274,5 +280,6 @@ robot_path_t search_for_path(pose_xyt_t start,
     emptyPath.utime = start.utime;
     emptyPath.path_length = 0;
     emptyPath.path.push_back(start);
+    delete_set(del_set);
     return emptyPath;
 }
