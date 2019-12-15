@@ -77,7 +77,7 @@ public:
     void handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm);
 
     // ADDED
-    void handleBlock(const lcm::ReceiveBuffer *rbuf, const std::string &channel, const mbot_arm_block_list_t *blocklist);
+    void handleBlock(const lcm::ReceiveBuffer *rbuf, const std::string &channel, const mbot_arm_block_t *blocklist);
     void handleBlockConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm);
 
 private:
@@ -122,8 +122,8 @@ private:
     int64_t most_recent_path_time;
 
     // Mbot arm block and camera
-    mbot_arm_block_list_t incomingblocklist_; //get blocklist
-    mbot_arm_block_list_t currentblocklist_; //get blocklist
+    mbot_arm_block_t incomingblocklist_; //get blocklist
+    mbot_arm_block_t currentblocklist_; //get blocklist
     mbot_arm_cmd_t detectblock;
     pose_xyt_t blockPose_;
     robot_path_t path;

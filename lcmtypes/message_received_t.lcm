@@ -5,4 +5,6 @@ struct message_received_t
 
     int64_t creation_time;    // time of message creation (assumption that this will be unique between messages)
     string channel; 		  //name of channel 
+    int8_t block_grabbed;
+
 }

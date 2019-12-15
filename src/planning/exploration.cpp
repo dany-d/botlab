@@ -95,11 +95,13 @@ void Exploration::handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& 
     haveNewPose_ = true;
 }
 
-void Exploration::handleBlock(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const mbot_arm_block_list_t* blocklist)
+void Exploration::handleBlock(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const mbot_arm_block_t* blocklist) 
+// SAL CHANGE
 {
 
     std::lock_guard<std::mutex> autoLock(dataLock_);
     incomingblocklist_ = *blocklist;
+    std::cout<<"INCOMING BLOCK COORDINATE"<<incomingblocklist_.pose.x<<"\n";
     haveNewBlocks_ = true;
 }
 
@@ -119,7 +121,7 @@ void Exploration::handleBlockConfirmation(const lcm::ReceiveBuffer* rbuf, const 
 bool Exploration::isReadyToUpdate(void)
 {
     std::lock_guard<std::mutex> autoLock(dataLock_);
-    return haveNewMap_ && haveNewPose_;
+    return (haveNewMap_ || haveNewPose_ || haveNewBlocks_ || new_block_pickup_status);
 }
 
 
@@ -359,6 +361,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
             std::cerr << "ERROR: Exploration::executeExploringMap: Set an invalid exploration status. Exploration failed!";
             return exploration_status_t::STATE_FAILED_EXPLORATION;
     }
+
 }
 
 int8_t Exploration::executeBlockDetection(bool initialize)
@@ -378,17 +381,66 @@ int8_t Exploration::executeBlockDetection(bool initialize)
 int8_t Exploration::executeGrabPlanner(bool initialize)
 {
     
-    mbot_arm_block_list_t currentblocklist_;
+    mbot_arm_block_t block_to_pick=currentblocklist_;
+    // currentblocklist_.utime=utime_now();
+    // currentblocklist_.num_blocks
 
     // Only execute below commands if number of blocks is > 0
+    float transform[3][3];
+    for (int i=0; i<3; i++){
+        for (int j=0; j<3; j++){
+            transform[i][j]=0;
+        }
+    }
 
-    if (currentblocklist_.num_blocks>1){
+    transform[0][0]=cos(currentPose_.theta);
+    transform[0][1]=sin(currentPose_.theta);
+    transform[0][2]=currentPose_.x;
+    transform[1][0]=-sin(currentPose_.theta);
+    transform[1][1]=cos(currentPose_.theta);
+    transform[1][2]=currentPose_.y;
+    transform[2][2]=1;
+
+    // float block_coords[3][1]={{block_to_pick.pose.y},
+    //                           {block_to_pick.pose.x},
+    //                           {1}};
+
+    float block_coords[3][1]={{1},
+                              {1}, //0.41199721
+                              {1}};
+
+    // Multiplying the two matrices together
+
+    float multi[1][3];
+
+    for(int i = 0; i < 3; ++i)
+      for(int j = 0; j < 1; ++j)
+        for(int k = 0; k < 3; ++k)
+        {
+            multi[i][j] += transform[i][k] * block_coords[k][j];
+        }
+    // Displaying the multiplication of two matrix.
+    std::cout <<"\n"<< "Output Matrix: " <<"\n";
+    for(int i = 0; i < 3; ++i)
+        for(int j = 0; j < 1; ++j)
+        {
+            std::cout << " " << multi[i][j];
+            if(j == 1-1)
+                std::cout << "\n";
+        }
+
+    multi[0][0]=1;
+    multi[1][0]=0.05;
+
+
+    // if (!block_to_pick.empty()){
         // int8_t n_blocks = detectblock.num_blocks;
         // Taking the first block in the list
         // Should probably change to the nearest block in the list
         std::cout<<"executeGrabPlanner: block available for pick up\n";
-        blockPose_ = currentblocklist_.blocks[0].pose;
+        // blockPose_ = block_to_pick.pose;
 
+        // std::cout<<"Block to pick is at location"<<blockPose_.x<<"  "<<blockPose_.y<<"\n";
         // Added by Salman
         // The block pose is with reference to the robot camera frame
         // Need to convert that to the global frame for the planner
@@ -396,12 +448,16 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
         pose_xyt_t desiredPose;
 
         // Go to the block location (Ideally we want some distance away from block location)
-        desiredPose.x=currentPose_.x+blockPose_.x;
-        desiredPose.y=currentPose_.y+blockPose_.y;
-        desiredPose.theta=atan2(blockPose_.y, blockPose_.x);
+        desiredPose.x=multi[0][0];
+        desiredPose.y=multi[1][0];
+        desiredPose.theta=currentPose_.theta;
+        desiredPose.utime=utime_now();
+
+        std::cout<<"desiredPose.x"<<desiredPose.x<<"desiredPose.y"<<desiredPose.y<<"desiredPose.theta"<<desiredPose.theta;
 
         // TODO: Check if the path is also safe
         currentPath_=planner_.planPath(currentPose_, desiredPose);
+        std::cout<<"after the planner";
         path = currentPath_;
 
         int itr = path.path.size();
@@ -417,23 +473,24 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
         lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &path);
 
         return exploration_status_t::STATE_GRAB_BLOCK;  
-    }
+    // }
 
-    std::cout<<"executeGrabPlanner: No block available for pick up\n";
-    return exploration_status_t::STATE_GRAB_BLOCK;  
+    // std::cout<<"executeGrabPlanner: No block available for pick up\n";
+    // return exploration_status_t::STATE_GRAB_BLOCK;  
 
 }
 
 
 int8_t Exploration::executeGrabBlock(bool initialize)
 {
+    std::cout<<"executeGrabBlock: Attempting to pick up block\n";
     do{
-    //status.state = exploration_status_t::STATE_RETURNING_HOME;
-    mbot_arm_cmd_t detectblock;
-    detectblock.utime = utime_now();
-    detectblock.mbot_cmd = 3;
+        //status.state = exploration_status_t::STATE_RETURNING_HOME;
+        mbot_arm_cmd_t detectblock;
+        detectblock.utime = utime_now();
+        detectblock.mbot_cmd = 3;
 
-    lcmInstance_->publish(COMMAND_ARM, &detectblock);
+        lcmInstance_->publish(COMMAND_ARM, &detectblock);
     }while(!block_pickup_status);
 
     // Need to check if the message confirmation was received
