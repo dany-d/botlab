@@ -91,11 +91,11 @@ robot_path_t construct_path(Node *currentNode, robot_path_t path, const Obstacle
         setpoints.y = roundit(grid_position_to_global_position(currentNode->n, distances).y);
         setpoints.theta = atan2(y_prev - setpoints.y, x_prev - setpoints.x);
 
-        if((itr ==5) || ((fabs(theta_prev-setpoints.theta) > 0.18) && (itr2==2))){
-        path.path.push_back(setpoints);
-        itr = 0;
-        itr2 = 0;
-
+        if ((itr == 10) || ((fabs(theta_prev - setpoints.theta) > 0.18) && (itr2 == 2)))
+        {
+            path.path.push_back(setpoints);
+            itr = 0;
+            itr2 = 0;
         }
         // std::cout << "added setpoint" << currentNode->n << "fcost:  " << currentNode->f_cost<< std::endl;
 
@@ -175,7 +175,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     double step = 1;
     int itr = 0;
     int dead_nei = 8;
-    double temp_g_cost=0;
+    double temp_g_cost = 0;
 
     // if(isValid(goal_ptr, params, distances)){
     //     std::cout << "Goal position invalid" << std::endl;
@@ -190,8 +190,6 @@ robot_path_t search_for_path(pose_xyt_t start,
         // printNode(currentNode);
 
         itr++;
-        
-
 
         if (itr == 10000000)
         {
@@ -213,6 +211,7 @@ robot_path_t search_for_path(pose_xyt_t start,
 
             path = construct_path(currentNode, path, distances);
             path.path.insert(path.path.begin(), start);
+            path.path.erase(path.path.begin() + 1);
             path.path.push_back(goal);
 
             // PRINT setpoints
@@ -258,7 +257,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                     {
                         n_ptr->p = currentNode;
                         n_ptr->g_cost = temp_g_cost;
-                        n_ptr->f_cost = n_ptr->g_cost + 1*dist(n_ptr, goal_ptr) + obs_cost(params, distances(n_ptr->n.x, n_ptr->n.y));
+                        n_ptr->f_cost = n_ptr->g_cost + 1.5 * dist(n_ptr, goal_ptr) + obs_cost(params, distances(n_ptr->n.x, n_ptr->n.y));
                         // std::cout << "obs_cost: " << pow(params.maxDistanceWithCost - distances(start_ptr->n.x, start_ptr->n.y),params.distanceCostExponent) << std::endl;
                         pq.push(std::move(n_ptr));
                         open_set.insert(std::move(n_ptr));
@@ -270,7 +269,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                             // std::cout << "repeated node found" << std::endl;
                             (*iter)->p = currentNode;
                             (*iter)->g_cost = temp_g_cost;
-                            (*iter)->f_cost = (*iter)->g_cost + 1*dist(*iter, goal_ptr) + obs_cost(params, distances((*iter)->n.x, (*iter)->n.y));
+                            (*iter)->f_cost = (*iter)->g_cost + 1.5 * dist(*iter, goal_ptr) + obs_cost(params, distances((*iter)->n.x, (*iter)->n.y));
                         }
                     }
                 }
@@ -281,7 +280,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             std::cout << "dead neighbors..." << std::endl;
         }
     }
-    
+
     std::cout << "pq empty..." << std::endl;
     emptyPath.utime = start.utime;
     emptyPath.path_length = 0;

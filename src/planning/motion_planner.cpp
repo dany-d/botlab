@@ -5,27 +5,23 @@
 #include <lcmtypes/robot_path_t.hpp>
 #include <cmath>
 
-
-MotionPlanner::MotionPlanner(const MotionPlannerParams& params)
-: params_(params)
+MotionPlanner::MotionPlanner(const MotionPlannerParams &params)
+    : params_(params)
 {
     setParams(params);
 }
 
-
-MotionPlanner::MotionPlanner(const MotionPlannerParams& params, const SearchParams& searchParams)
-: params_(params)
-, searchParams_(searchParams)
+MotionPlanner::MotionPlanner(const MotionPlannerParams &params, const SearchParams &searchParams)
+    : params_(params), searchParams_(searchParams)
 {
 }
 
-
-robot_path_t MotionPlanner::planPath(const pose_xyt_t& start,
-                                     const pose_xyt_t& goal,
-                                     const SearchParams& searchParams) const
+robot_path_t MotionPlanner::planPath(const pose_xyt_t &start,
+                                     const pose_xyt_t &goal,
+                                     const SearchParams &searchParams) const
 {
     // If the goal isn't valid, then no path can actually exist
-    if(!isValidGoal(goal))
+    if (!isValidGoal(goal))
     {
         robot_path_t failedPath;
         failedPath.utime = utime_now();
@@ -41,14 +37,12 @@ robot_path_t MotionPlanner::planPath(const pose_xyt_t& start,
     return search_for_path(start, goal, distances_, searchParams);
 }
 
-
-robot_path_t MotionPlanner::planPath(const pose_xyt_t& start, const pose_xyt_t& goal) const
+robot_path_t MotionPlanner::planPath(const pose_xyt_t &start, const pose_xyt_t &goal) const
 {
     return planPath(start, goal, searchParams_);
 }
 
-
-bool MotionPlanner::isValidGoal(const pose_xyt_t& goal) const
+bool MotionPlanner::isValidGoal(const pose_xyt_t &goal) const
 {
     float dx = goal.x - prev_goal.x, dy = goal.y - prev_goal.y;
     float distanceFromPrev = std::sqrt(dx * dx + dy * dy);
@@ -60,13 +54,13 @@ bool MotionPlanner::isValidGoal(const pose_xyt_t& goal) const
     //std::cout<<distances_.widthInCells()<<" "<<distances_.heightInCells()<<std::endl;
     auto goalCell = global_position_to_grid_cell(Point<double>(goal.x, goal.y), distances_);
     // A valid goal is in the grid
-    if(distances_.isCellInGrid(goalCell.x, goalCell.y))
+    if (distances_.isCellInGrid(goalCell.x, goalCell.y))
     {
         //std::cout<<"Distance: "<< goalCell.x <<" "<<goalCell.y<<" "<<distances_(goalCell.x, goalCell.y)<<"\n";
         // And is far enough from obstacles that the robot can physically occupy the space
         // Add an extra cell to account for discretization error and make motion a little safer by not trying to
         // completely snuggle up against the walls in the motion plan
-        std::cout<<"is cell valid: "<<(distances_(goalCell.x, goalCell.y) > params_.robotRadius)<<std::endl;
+        std::cout << "is cell valid: " << (distances_(goalCell.x, goalCell.y) > params_.robotRadius) << std::endl;
         return distances_(goalCell.x, goalCell.y) > params_.robotRadius;
     }
     //std::cout<<"not in grid\n";
@@ -75,12 +69,11 @@ bool MotionPlanner::isValidGoal(const pose_xyt_t& goal) const
     return true;
 }
 
-
-bool MotionPlanner::isPathSafe(const robot_path_t& path) const
+bool MotionPlanner::isPathSafe(const robot_path_t &path) const
 {
 
     ///////////// TODO: Implement your test for a safe path here //////////////////
-    if(path.path_length <= 1)
+    if (path.path_length < 1)
     {
         return false;
     }
@@ -88,29 +81,27 @@ bool MotionPlanner::isPathSafe(const robot_path_t& path) const
     // Look at each position in the path, along with any intermediate points between the positions to make sure they are
     // far enough from walls in the occupancy grid to be safe
     int cnt = 0;
-    for(auto p : path.path)
+    for (auto p : path.path)
     {
         Point<int> cell = distances_.poseToCell(p.x, p.y);
-        if(distances_(cell.x, cell.y) < params_.robotRadius && cnt!=1)
+        if (distances_(cell.x, cell.y) < params_.robotRadius - 0.05 && cnt != 0)
         {
-            cnt++;
-            std::cout<<"Path not safe\n";
+            std::cout << "Path not safe\n";
             return false;
         }
+        cnt++;
     }
     return true;
 }
 
-
-void MotionPlanner::setMap(const OccupancyGrid& map)
-{   //std::cout<<"Setup map\n";
+void MotionPlanner::setMap(const OccupancyGrid &map)
+{ //std::cout<<"Setup map\n";
     distances_.setDistances(map);
 }
 
-
-void MotionPlanner::setParams(const MotionPlannerParams& params)
+void MotionPlanner::setParams(const MotionPlannerParams &params)
 {
     searchParams_.minDistanceToObstacle = params_.robotRadius;
     searchParams_.maxDistanceWithCost = 1.5 * searchParams_.minDistanceToObstacle;
-    searchParams_.distanceCostExponent = -5;
+    searchParams_.distanceCostExponent = -0.7;
 }

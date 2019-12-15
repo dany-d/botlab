@@ -2,9 +2,9 @@
 #include <slam/occupancy_grid.hpp>
 
 ObstacleDistanceGrid::ObstacleDistanceGrid(void)
-    : width_(0), height_(0), metersPerCell_(0.05f) //changed from 0.025f
+    : width_(0), height_(0), metersPerCell_(0.025f) //changed from 0.05f
       ,
-      cellsPerMeter_(20.0f) //changed from 40.0f
+      cellsPerMeter_(40.0f) //changed from 20.0f
 {
 }
 

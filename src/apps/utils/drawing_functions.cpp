@@ -149,7 +149,7 @@ void draw_path(const robot_path_t& path, const float* color, vx_buffer_t* buffer
     for(auto& pose : path.path)
     {
         vx_buffer_add_back(buffer, vxo_chain(vxo_mat_translate3(pose.x, pose.y, 0.0),
-                                             vxo_mat_scale(0.05f), //changed from 0.025
+                                             vxo_mat_scale(0.025f), //changed from 0.05
                                              vxo_box(vxo_mesh_style(color))));
     }
 
