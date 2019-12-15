@@ -259,7 +259,8 @@ int8_t Exploration::executeExploringMap(bool initialize)
     frontiers_ = find_map_frontiers(currentMap_, currentPose_);
     if(frontiers_.size()>0){
       std::cout<<"Number of frontiers: "<<frontiers_.size()<<std::endl;
-      if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || frontiers_.size()!=prev_frontier_size){
+      if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || \
+      fabs(currentPose_.x - currentTarget_.x) + fabs(currentPose_.y - currentTarget_.y)<kReachedPositionThreshold ){// frontiers_.size()!=prev_frontier_size){
           prev_frontier_size = frontiers_.size();
           currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
           currentTarget_ = currentPath_.path[currentPath_.path_length-1];
