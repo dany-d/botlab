@@ -246,17 +246,23 @@ int8_t Exploration::executeExploringMap(bool initialize)
     */
     planner_.setMap(currentMap_);
     frontiers_ = find_map_frontiers(currentMap_, currentPose_);
-    if (frontiers_.size() > 0)
-    {
-        std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
-        if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 ||
-            fabs(currentPose_.x - currentTarget_.x) + fabs(currentPose_.y - currentTarget_.y) < kReachedPositionThreshold)
-        { // frontiers_.size()!=prev_frontier_size){
-            prev_frontier_size = frontiers_.size();
-            currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
-            currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
-        }
-    }
+    pose_xyt_t desiredpose;
+    desiredpose.x = 1;
+    desiredpose.y = 0;
+
+    currentPath_ = planner_.planPath(currentPose_, desiredpose);
+
+    // if (frontiers_.size() > 0)
+    // {
+    //     std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
+    //     if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 ||
+    //         fabs(currentPose_.x - currentTarget_.x) + fabs(currentPose_.y - currentTarget_.y) < kReachedPositionThreshold)
+    //     { // frontiers_.size()!=prev_frontier_size){
+    //         prev_frontier_size = frontiers_.size();
+    //         currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+    //         currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+    //     }
+    // }
 
     most_recent_path_time = currentPath_.utime;
 
@@ -269,24 +275,24 @@ int8_t Exploration::executeExploringMap(bool initialize)
     status.state = exploration_status_t::STATE_EXPLORING_MAP;
 
     // If no frontiers remain, then exploration is complete
-    if (frontiers_.empty())
-    {
-        std::cout << "Frontiers empty.\n";
-        currentTarget_ = homePose_;
-        currentPath_.path_length = 0;
-        status.status = exploration_status_t::STATUS_COMPLETE;
-    }
+    // if (frontiers_.empty())
+    // {
+    //     std::cout << "Frontiers empty.\n";
+    //     currentTarget_ = homePose_;
+    //     currentPath_.path_length = 0;
+    //     status.status = exploration_status_t::STATUS_COMPLETE;
+    // }
     // Else if there's a path to follow, then we're still in the process of exploring
-    else if (currentPath_.path.size() >= 1)
-    {
-        status.status = exploration_status_t::STATUS_IN_PROGRESS;
-    }
-    // Otherwise, there are frontiers, but no valid path exists, so exploration has failed
-    else
-    {
-        //std::cout<<"Wait one iteration.\n";
-        status.status = exploration_status_t::STATUS_IN_PROGRESS; //exploration_status_t::STATUS_FAILED;
-    }
+    // else if (currentPath_.path.size() >= 1)
+    // {
+    //     status.status = exploration_status_t::STATUS_IN_PROGRESS;
+    // }
+    // // Otherwise, there are frontiers, but no valid path exists, so exploration has failed
+    // else
+    // {
+    //     //std::cout<<"Wait one iteration.\n";
+    //     status.status = exploration_status_t::STATUS_IN_PROGRESS; //exploration_status_t::STATUS_FAILED;
+    // }
 
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
 
