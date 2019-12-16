@@ -20,7 +20,14 @@ bool operator==(const pose_xyt_t& lhs, const pose_xyt_t& rhs)
     return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.theta == rhs.theta);
 }
 
-
+float rounditup(float val)
+{
+    if (val < 0)
+    {
+        return ceil(val * 100 - 0.5) / 100;
+    }
+    return floor(val * 100 + 0.5) / 100;
+}
 
 Exploration::Exploration(int32_t teamNumber,
                          lcm::LCM* lcmInstance)
@@ -308,18 +315,38 @@ int8_t Exploration::executeExploringMap(bool initialize)
     *       -- You will likely be able to see the frontier before actually reaching the end of the path leading to it.
     */
 
+    int numBlock = 4;
+    int block_itr = 0;
+    std::vector<pose_xyt_t> desiredposes;
+    desiredposes[0].x = 0;
+    desiredposes[0].y = 0;
+    desiredposes[0].theta = 0;
+
+    desiredposes[1].x = 0;
+    desiredposes[1].y = 0;
+    desiredposes[1].theta = 0;
+
+    desiredposes[2].x = 0;
+    desiredposes[2].y = 0;
+    desiredposes[2].theta = 0;
+
+    desiredposes[3].x = 0;
+    desiredposes[3].y = 0;
+    desiredposes[3].theta = 0;
+
 
     planner_.setMap(currentMap_);
     frontiers_ = find_map_frontiers(currentMap_, currentPose_);
-    if (frontiers_.size() > 0)
+    if (block_itr < 4)
     {
-        std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
-        if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || frontiers_.size() != prev_frontier_size)
+        std::cout << "Block num: " << block_itr << std::endl;
+        if (!planner_.isPathSafe(currentPath_))
         {
-            prev_frontier_size = frontiers_.size();
-            currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
-            currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+            // currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+            currentPath_ = planner_.planPath(currentPose_, desiredposes[block_itr]);
+            // currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
         }
+        ++block_itr;
     }
 
     most_recent_path_time = currentPath_.utime;
@@ -333,7 +360,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
     status.state = exploration_status_t::STATE_EXPLORING_MAP;
     
     // If no frontiers remain, then exploration is complete
-    if(frontiers_.empty())
+    if(block_itr==4)
     {
         status.status = exploration_status_t::STATUS_COMPLETE;
     }
@@ -391,28 +418,69 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     // mbot_arm_block_t block_to_pick=currentblocklist_;
     // std::cout<<"\n Block to pick up from location: "<<block_to_pick.pose.x<<"  "<<block_to_pick.pose.y<<"\n";
 
-    mbot_arm_block_t block_to_pick = currentblocklist_;
+    planner_.setMap(currentMap_);
+    // frontiers_ = find_map_frontiers(currentMap_, currentPose_);
+
+    mbot_arm_block_t block_to_pick = incomingblocklist_;
 
     // Only execute below commands if number of blocks is > 0
     float transform[3][3];
-    for (int i=0; i<3; i++){
-        for (int j=0; j<3; j++){
-            transform[i][j]=0;
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            transform[i][j] = 0;
         }
     }
-    std::cout << "currentpose= " << currentPose_.theta<<std::endl;
-    
-    transform[0][0]=cos(currentPose_.theta);
-    transform[0][1]=sin(currentPose_.theta);
-    transform[0][2]=-currentPose_.x;
-    transform[1][0]=-sin(currentPose_.theta);
-    transform[1][1]=cos(currentPose_.theta);
-    transform[1][2]=-currentPose_.y;
-    transform[2][2]=1;
+    std::cout << "currentpose= " << currentPose_.theta << std::endl;
 
-    float block_coords[3][1]={{block_to_pick.pose.y},
-                              {block_to_pick.pose.x},
-                              {1}};
+    float rot_angle= -currentPose_.theta;
+
+    // if ((currentPose_.theta <= M_PI / 2) && (currentPose_.theta >=0)){
+    //     rot_angle = M_PI / 2 - currentPose_.theta;
+    // }
+    // if(currentPose_.theta>M_PI/2){
+    //     rot_angle=currentPose_.theta-M_PI/2;
+    // }
+    // else if (currentPose_.theta<0){
+    //     rot_angle = M_PI/2 + fabs(currentPose_.theta);
+    // }
+    
+
+
+    transform[0][0] = cos(rot_angle);
+    transform[0][1] = -sin(rot_angle);
+    transform[0][2] = currentPose_.x;
+    transform[1][0] = sin(rot_angle);
+    transform[1][1] = cos(rot_angle);
+    transform[1][2] = currentPose_.y;
+    transform[2][2] = 1;
+
+    std::cout << "\n"
+              << "Transform Matrix: "
+              << "\n";
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+        {
+            std::cout << " " << transform[i][j];
+            if (j == 3 - 1)
+                std::cout << "\n";
+        }
+
+    std::cout << "\n"
+              << "Block Matrix: "
+              << "\n";
+    float block_coords[3][1] = {{-block_to_pick.pose.y},
+                                {block_to_pick.pose.x},
+                                {1}};
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 1; ++j)
+        {
+            std::cout << " " << block_coords[i][j];
+            if (j == 1 - 1)
+                std::cout << "\n";
+        }
 
     // float block_coords[3][1]={{1},
     //                             {1}, //0.41199721
@@ -420,43 +488,56 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
 
     // Multiplying the two matrices together
 
-    float multi[1][3];
+    float multi[3][1];
 
-    for(int i = 0; i < 3; ++i)
-        for(int j = 0; j < 1; ++j)
-        for(int k = 0; k < 3; ++k)
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 1; j++)
         {
-            multi[i][j] += transform[i][k] * block_coords[k][j];
+            multi[i][j] = 0;
+        }
+    }
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 1; ++j)
+        {
+            for (int k = 0; k < 3; ++k)
+            {
+                multi[i][j] += transform[i][k] * block_coords[k][j];
+            }
+            // if(multi[i][j]>1e3 || multi[i][j]<1e-3 )
+            //     multi[i][j]=0;
         }
     // Displaying the multiplication of two matrix.
-    std::cout <<"\n"<< "Output Matrix: " <<"\n";
-    for(int i = 0; i < 3; ++i)
-        for(int j = 0; j < 1; ++j)
+    std::cout << "\n"
+              << "Output Matrix: "
+              << "\n";
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 1; ++j)
         {
             std::cout << " " << multi[i][j];
-            if(j == 1-1)
+            if (j == 1 - 1)
                 std::cout << "\n";
         }
-
-
-    planner_.setMap(currentMap_);
-    frontiers_ = find_map_frontiers(currentMap_, currentPose_);
     pose_xyt_t desiredpose;
-    desiredpose.x = multi[0][0];
-    desiredpose.y = multi[1][0];
+    desiredpose.x = rounditup(multi[0][0]);
+    desiredpose.y = rounditup(multi[1][0]);
     desiredpose.theta = 0;
 
-    std::cout << "desiredPose.x" << desiredpose.x << "," << "desiredpose.y" << desiredpose.y << std::endl;
+    std::cout << "desiredPose.x" << desiredpose.x << ","
+              << "desiredpose.y" << desiredpose.y << std::endl;
 
-    std::cout<<"1\n";
+    std::cout << "1\n";
     currentPath_ = planner_.planPath(currentPose_, desiredpose);
     //currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+    std::cout << "Printing the path to grab the block\n";
+    for (int i; i < path.path.size(); ++i)
+    {
+        std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
+    }
+    currentPath_.path.pop_back();
 
-     for(int i;i<path.path.size();++i){
-                std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
-            }
-
-    std::cout<<"2\n";
+    std::cout << "2\n";
 
     most_recent_path_time = currentPath_.utime;
 

@@ -75,6 +75,7 @@ double cost_to_go(int newX, int newY, double step)
 robot_path_t construct_path(Node *currentNode, robot_path_t path, const ObstacleDistanceGrid &distances)
 {
     pose_xyt_t setpoints;
+    int cam_itr = 0;
     int itr = 0;
     int itr2 = 0;
     float theta_prev = 0;
@@ -85,17 +86,20 @@ robot_path_t construct_path(Node *currentNode, robot_path_t path, const Obstacle
     while (currentNode->p != nullptr)
     {
         // std::cin.get();
+        cam_itr++;
         itr++;
         itr2++;
         setpoints.x = roundit(grid_position_to_global_position(currentNode->n, distances).x);
         setpoints.y = roundit(grid_position_to_global_position(currentNode->n, distances).y);
         setpoints.theta = atan2(y_prev - setpoints.y, x_prev - setpoints.x);
 
-        if ((itr == 4) || ((fabs(theta_prev - setpoints.theta) > 0.18) && (itr2 == 2)))
-        {
-            path.path.push_back(setpoints);
-            itr = 0;
-            itr2 = 0;
+        if (cam_itr>11){
+            if ((itr == 5) || ((fabs(theta_prev - setpoints.theta) > 0.18) && (itr2 == 2)))
+            {
+                path.path.push_back(setpoints);
+                itr = 0;
+                itr2 = 0;
+            }
         }
         // std::cout << "added setpoint" << currentNode->n << "fcost:  " << currentNode->f_cost<< std::endl;
 
