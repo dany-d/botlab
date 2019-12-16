@@ -129,7 +129,7 @@ void Exploration::handleBlockConfirmation(const lcm::ReceiveBuffer* rbuf, const 
 bool Exploration::isReadyToUpdate(void)
 {
     std::lock_guard<std::mutex> autoLock(dataLock_);
-    return (haveNewMap_ || haveNewPose_ || haveNewBlocks_ || new_block_pickup_status);
+    return (haveNewMap_ && (haveNewPose_ || haveNewBlocks_ || new_block_pickup_status));
 }
 
 
@@ -391,15 +391,71 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     // mbot_arm_block_t block_to_pick=currentblocklist_;
     // std::cout<<"\n Block to pick up from location: "<<block_to_pick.pose.x<<"  "<<block_to_pick.pose.y<<"\n";
 
+    mbot_arm_block_t block_to_pick = currentblocklist_;
+
+    // Only execute below commands if number of blocks is > 0
+    float transform[3][3];
+    for (int i=0; i<3; i++){
+        for (int j=0; j<3; j++){
+            transform[i][j]=0;
+        }
+    }
+    std::cout << "currentpose= " << currentPose_.theta<<std::endl;
+    
+    transform[0][0]=cos(currentPose_.theta);
+    transform[0][1]=sin(currentPose_.theta);
+    transform[0][2]=-currentPose_.x;
+    transform[1][0]=-sin(currentPose_.theta);
+    transform[1][1]=cos(currentPose_.theta);
+    transform[1][2]=-currentPose_.y;
+    transform[2][2]=1;
+
+    float block_coords[3][1]={{block_to_pick.pose.y},
+                              {block_to_pick.pose.x},
+                              {1}};
+
+    // float block_coords[3][1]={{1},
+    //                             {1}, //0.41199721
+    //                             {1}};
+
+    // Multiplying the two matrices together
+
+    float multi[1][3];
+
+    for(int i = 0; i < 3; ++i)
+        for(int j = 0; j < 1; ++j)
+        for(int k = 0; k < 3; ++k)
+        {
+            multi[i][j] += transform[i][k] * block_coords[k][j];
+        }
+    // Displaying the multiplication of two matrix.
+    std::cout <<"\n"<< "Output Matrix: " <<"\n";
+    for(int i = 0; i < 3; ++i)
+        for(int j = 0; j < 1; ++j)
+        {
+            std::cout << " " << multi[i][j];
+            if(j == 1-1)
+                std::cout << "\n";
+        }
+
+
     planner_.setMap(currentMap_);
     frontiers_ = find_map_frontiers(currentMap_, currentPose_);
     pose_xyt_t desiredpose;
-    desiredpose.x = 1;
-    desiredpose.y = 0;
+    desiredpose.x = multi[0][0];
+    desiredpose.y = multi[1][0];
+    desiredpose.theta = 0;
+
+    std::cout << "desiredPose.x" << desiredpose.x << "," << "desiredpose.y" << desiredpose.y << std::endl;
 
     std::cout<<"1\n";
     currentPath_ = planner_.planPath(currentPose_, desiredpose);
     //currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+
+     for(int i;i<path.path.size();++i){
+                std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
+            }
+
     std::cout<<"2\n";
 
     most_recent_path_time = currentPath_.utime;
@@ -423,45 +479,45 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     exploration_status_t status;
     status.utime = utime_now();
     status.team_number = teamNumber_;
-    status.state = exploration_status_t::STATE_PLAN_TO_GRAB_LOC;
+    status.state = exploration_status_t::STATE_EXPLORING_MAP;
 
-    double distToHome = distance_between_points(Point<float>(desiredpose.x, desiredpose.y),
-                                                Point<float>(currentPose_.x, currentPose_.y));
-    // If we're within the threshold of home, then we're done.
-    if (distToHome <= kReachedPositionThreshold)
+    // If no frontiers remain, then exploration is complete
+    if (frontiers_.empty())
     {
         status.status = exploration_status_t::STATUS_COMPLETE;
-        std::cout << "Returning complete.\n";
     }
-    // Otherwise, if there's a path, then keep following it
-    else if (currentPath_.path.size() >= 1)
+    // Else if there's a path to follow, then we're still in the process of exploring
+    else if (currentPath_.path.size() > 1)
     {
         status.status = exploration_status_t::STATUS_IN_PROGRESS;
     }
-    // Else, there's no valid path to follow and we aren't home, so we have failed.
+    // Otherwise, there are frontiers, but no valid path exists, so exploration has failed
     else
     {
         status.status = exploration_status_t::STATUS_FAILED;
-        std::cout << "No vaild path and not reached home.\n";
     }
 
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
 
     ////////////////////////////   Determine the next state    ////////////////////////
-    if (status.status == exploration_status_t::STATUS_IN_PROGRESS)
+    switch (status.status)
     {
+    // Don't change states if we're still a work-in-progress
+    case exploration_status_t::STATUS_IN_PROGRESS:
+        return exploration_status_t::STATE_EXPLORING_MAP;
+
+    // If exploration is completed, then head home
+    case exploration_status_t::STATUS_COMPLETE:
         return exploration_status_t::STATE_RETURNING_HOME;
-    }
-    else if (status.status == exploration_status_t::STATUS_FAILED)
-    {
+
+    // If something has gone wrong and we can't reach all frontiers, then fail the exploration.
+    case exploration_status_t::STATUS_FAILED:
+        return exploration_status_t::STATE_FAILED_EXPLORATION;
+
+    default:
+        std::cerr << "ERROR: Exploration::executeExploringMap: Set an invalid exploration status. Exploration failed!";
         return exploration_status_t::STATE_FAILED_EXPLORATION;
     }
-    else
-    {
-        return exploration_status_t::STATE_COMPLETED_EXPLORATION;
-    }
-
-
 }
 
 
@@ -600,7 +656,7 @@ int8_t Exploration::executeGrabBlock(bool initialize)
 
     // Need to check if the message confirmation was received
 
-    return exploration_status_t::STATE_RETURNING_HOME;
+    return exploration_status_t::STATE_COMPLETED_EXPLORATION;
     //return 0;
 }
 

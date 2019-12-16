@@ -91,7 +91,7 @@ robot_path_t construct_path(Node *currentNode, robot_path_t path, const Obstacle
         setpoints.y = roundit(grid_position_to_global_position(currentNode->n, distances).y);
         setpoints.theta = atan2(y_prev - setpoints.y, x_prev - setpoints.x);
 
-        if ((itr == 10) || ((fabs(theta_prev - setpoints.theta) > 0.18) && (itr2 == 2)))
+        if ((itr == 4) || ((fabs(theta_prev - setpoints.theta) > 0.18) && (itr2 == 2)))
         {
             path.path.push_back(setpoints);
             itr = 0;
