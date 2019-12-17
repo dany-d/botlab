@@ -432,9 +432,9 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
             transform[i][j] = 0;
         }
     }
-    std::cout << "currentpose= " << currentPose_.theta << std::endl;
+    std::cout << "currentpose= " << currentPose_.theta * 180 / M_PI << std::endl;
 
-    float rot_angle= -currentPose_.theta;
+    // float rot_angle= currentPose_.theta;
 
     // if ((currentPose_.theta <= M_PI / 2) && (currentPose_.theta >=0)){
     //     rot_angle = M_PI / 2 - currentPose_.theta;
@@ -445,14 +445,12 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     // else if (currentPose_.theta<0){
     //     rot_angle = M_PI/2 + fabs(currentPose_.theta);
     // }
-    
 
-
-    transform[0][0] = cos(rot_angle);
-    transform[0][1] = -sin(rot_angle);
+    transform[0][0] = sin(currentPose_.theta);
+    transform[0][1] = cos(currentPose_.theta);
     transform[0][2] = currentPose_.x;
-    transform[1][0] = sin(rot_angle);
-    transform[1][1] = cos(rot_angle);
+    transform[1][0] = -cos(currentPose_.theta);
+    transform[1][1] = sin(currentPose_.theta);
     transform[1][2] = currentPose_.y;
     transform[2][2] = 1;
 
@@ -470,8 +468,8 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     std::cout << "\n"
               << "Block Matrix: "
               << "\n";
-    float block_coords[3][1] = {{-block_to_pick.pose.y},
-                                {block_to_pick.pose.x},
+    float block_coords[3][1] = {{block_to_pick.pose.x},
+                                {block_to_pick.pose.y},
                                 {1}};
 
     for (int i = 0; i < 3; ++i)
@@ -528,16 +526,24 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
               << "desiredpose.y" << desiredpose.y << std::endl;
 
     std::cout << "1\n";
-    currentPath_ = planner_.planPath(currentPose_, desiredpose);
-    //currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
-    std::cout << "Printing the path to grab the block\n";
-    for (int i; i < path.path.size(); ++i)
-    {
-        std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
-    }
-    currentPath_.path.pop_back();
+    // currentPath_ = planner_.planPath(currentPose_, desiredpose);
+    robot_path_t emptyPath;
+    emptyPath.utime = utime_now();
+    emptyPath.path_length = 0;
+    emptyPath.path.push_back(desiredpose);
 
-    std::cout << "2\n";
+    currentPath_ = emptyPath;
+
+
+    //currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+    // std::cout << "Printing the path to grab the block\n";
+    // for (int i; i < path.path.size(); ++i)
+    // {
+    //     std::cout << path.path[i].x << "," << path.path[i].y << std::endl;
+    // }
+    // currentPath_.path.pop_back();
+
+    std::cout << "after assigning path...\n";
 
     most_recent_path_time = currentPath_.utime;
 
