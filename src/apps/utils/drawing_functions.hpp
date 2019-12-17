@@ -105,7 +105,7 @@ void draw_distance_grid(const ObstacleDistanceGrid& grid, float cspaceDistance, 
 * \param    color               Color to draw the frontiers
 * \param    buffer              Buffer to add the frontiers to
 */
-void draw_frontiers(const std::vector<frontier_t>& frontiers, 
+void draw_frontiers(std::vector<frontier_t>& frontiers, 
                     double metersPerCell, 
                     const float* color, 
                     vx_buffer_t* buffer);

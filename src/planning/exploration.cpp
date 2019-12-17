@@ -253,7 +253,10 @@ int8_t Exploration::executeExploringMap(bool initialize)
             fabs(currentPose_.x - currentTarget_.x) + fabs(currentPose_.y - currentTarget_.y) < kReachedPositionThreshold)
         { // frontiers_.size()!=prev_frontier_size){
             prev_frontier_size = frontiers_.size();
-            currentPath_ = plan_path_to_frontier(frontiers_, currentPose_, currentMap_, planner_);
+            currentPath_ = plan_path_to_frontier(frontiers_,currentPose_, currentMap_, planner_);
+            if (currentPath_.path_length == 0){
+                frontiers_.pop_back();
+            }
             currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
         }
     }
@@ -325,7 +328,11 @@ int8_t Exploration::executeReturningHome(bool initialize)
     if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 || sqrt((homePose_.x - currentTarget_.x) * (homePose_.x - currentTarget_.x) + (homePose_.y - currentTarget_.y) * (homePose_.y - currentTarget_.y)) > kReachedPositionThreshold)
     {
         currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
-        currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
+        currentTarget_ = currentPath_.path[currentPath_.path_length-1];
+        if(currentPath_.path_length > 10){
+            currentPath_.path.resize(int(0.3*currentPath_.path.size()));
+        }
+        
     }
     std::cout << "Path length to home: " << currentPath_.path.size() << "\n";
     /////////////////////////////// End student code ///////////////////////////////
@@ -372,6 +379,7 @@ int8_t Exploration::executeReturningHome(bool initialize)
         return exploration_status_t::STATE_COMPLETED_EXPLORATION;
     }
 }
+
 
 int8_t Exploration::executeCompleted(bool initialize)
 {

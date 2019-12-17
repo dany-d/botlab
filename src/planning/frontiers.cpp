@@ -7,10 +7,15 @@
 #include <set>
 #include <cassert>
 
+bool sortcondition(frontier_t i1, frontier_t i2)
+{
+  return (i1.dist < i2.dist);
+}
+
 
 bool is_frontier_cell(int x, int y, const OccupancyGrid& map);
 frontier_t grow_frontier(Point<int> cell, const OccupancyGrid& map, std::set<Point<int>>& visitedFrontiers);
-robot_path_t path_to_frontier(const frontier_t& frontier,
+robot_path_t path_to_frontier( frontier_t& frontier,
                               const pose_xyt_t& pose,
                               const OccupancyGrid& map,
                               const MotionPlanner& planner);
@@ -123,7 +128,7 @@ robot_path_t plan_path_to_home(const pose_xyt_t &homePose,
 }
 
 
-robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
+robot_path_t plan_path_to_frontier(std::vector<frontier_t>& frontiers,
                                    const pose_xyt_t& robotPose,
                                    const OccupancyGrid& map,
                                    const MotionPlanner& planner)
@@ -164,69 +169,91 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
         }
         goalPose.x/= frontiers[i].cells.size();
         goalPose.y/= frontiers[i].cells.size();
+        frontiers[i].mean.x = goalPose.x;
+        frontiers[i].mean.y = goalPose.y;
+        frontiers[i].dist = sqrt(pow(goalPose.x -robotPose.x,2)+pow(goalPose.y-robotPose.y,2));
 
-        if (min > sqrt(pow(goalPose.x,2)+pow(goalPose.x,2)))
-        {
-          min=sqrt(pow(goalPose.x,2)+pow(goalPose.x,2));
-          desiredPose.x=goalPose.x;
-          desiredPose.y=goalPose.y;
-          min_index=i;
-        }
+        // if (min > sqrt(pow(goalPose.x -robotPose.x,2)+pow(goalPose.y-robotPose.y,2)))
+        // {
+        //   min = sqrt(pow(goalPose.x - robotPose.x, 2) + pow(goalPose.y - robotPose.y, 2));
+        //   desiredPose.x=goalPose.x;
+        //   desiredPose.y=goalPose.y;
+        //   
+        // }
 
-        std::cout<<"Closest frontier x and y coordinate are: " <<  desiredPose.x <<" "<< desiredPose.y<<std::endl;
+        // std::sort(frontiers.begin(), frontiers.end(), sortcondition);
       }
 
+      while(min_index<frontiers.size())
+      {
+        sort(frontiers.begin(), frontiers.end(), sortcondition);
+        desiredPose.x = frontiers[min_index].mean.x;
+        desiredPose.y = frontiers[min_index].mean.y;
 
-    // Calculating the equation of line perpendicular to current set of points
+        std::cout << "Closest frontier x and y coordinate are: " << desiredPose.x << " " << desiredPose.y << std::endl;
 
-        int num_of_cells = frontiers[min_index].cells.size()-1;
+        // Calculating the equation of line perpendicular to current set of points
+
+        int num_of_cells = frontiers[min_index].cells.size() - 1;
         // Slope of the line passing through the closest frontier
-        float m= (frontiers[min_index].cells[num_of_cells].x - frontiers[min_index].cells[0].x)/(frontiers[min_index].cells[num_of_cells].y - frontiers[min_index].cells[0].y);
+        float m = (frontiers[min_index].cells[num_of_cells].x - frontiers[min_index].cells[0].x) / (frontiers[min_index].cells[num_of_cells].y - frontiers[min_index].cells[0].y);
         // Find the slope of line perpendicular to original line
-        m=-1/m;
+        m = -1 / m;
 
         // This line must pass through the centroid of the contour
         // Intercept of this line is
-        float c= desiredPose.y - desiredPose.x*m;
+        float c = desiredPose.y - desiredPose.x * m;
         pose_xyt_t goalPose2;
 
         // First moving in postive x direction
 
-        for (unsigned int x=0; x<10; x++){
-          goalPose2.x = desiredPose.x+x*map.metersPerCell();
-          goalPose2.y = m*goalPose2.x+c;
-          std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
+        for (unsigned int x = 0; x < 10; x += 2)
+        {
+          goalPose2.x = desiredPose.x + x * map.metersPerCell();
+          goalPose2.y = m * goalPose2.x + c;
+          std::cout << "Goal2: " << goalPose2.x << " " << goalPose2.y << std::endl;
 
-          if(planner.isValidGoal(goalPose2)){
+          if (planner.isValidGoal(goalPose2))
+          {
             //std::cout<<"Valid goal.\n";
             robot_path_t path;
             path = planner.planPath(robotPose, goalPose2);
             //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
-            if(planner.isPathSafe(path) && path.path_length!=0){
-              std::cout<<"A path to frontier is returned.\n";
+            if (planner.isPathSafe(path) && path.path_length != 0)
+            {
+              std::cout << "A path to frontier is returned.\n";
               return path;
             }
           }
-        }
+            } 
+          
 
-        // Second moving in negative x direction
 
-        for (int x=-1; x>-11; x--){
-          goalPose2.x = desiredPose.x+x*map.metersPerCell();
-          goalPose2.y = m*goalPose2.x+c;
-          std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
+          // Second moving in negative x direction
 
-          if(planner.isValidGoal(goalPose2)){
-            //std::cout<<"Valid goal.\n";
-            robot_path_t path;
-            path = planner.planPath(robotPose, goalPose2);
-            //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
-            if(planner.isPathSafe(path) && path.path_length!=0){
-              std::cout<<"A path to frontier is returned.\n";
-              return path;
+          for (int x=-1; x>-11; x-=2){
+            goalPose2.x = desiredPose.x+x*map.metersPerCell();
+            goalPose2.y = m*goalPose2.x+c;
+            std::cout<<"Goal2: "<<goalPose2.x<<" "<<goalPose2.y<<std::endl;
+
+            if(planner.isValidGoal(goalPose2)){
+              //std::cout<<"Valid goal.\n";
+              robot_path_t path;
+              path = planner.planPath(robotPose, goalPose2);
+              //std::cout<<planner.isPathSafe(path) <<" "<<path.path_length<<std::endl;
+              if(planner.isPathSafe(path) && path.path_length!=0){
+                std::cout<<"A path to frontier is returned.\n";
+                return path;
+              }
             }
           }
-        }
+          min_index++;
+          std::cout<<"This frontier is not cool, checking next one .... " << std::endl;
+      }
+        // if closest not feasible, check next - 
+
+
+
 
 
 
@@ -252,7 +279,7 @@ robot_path_t plan_path_to_frontier(const std::vector<frontier_t>& frontiers,
     //     }
     //   }
     // }
-    std::cout<<"Empty Path returned.\n";
+    std::cout<<"No path to any frontiers found.... this is not good\n";
     emptyPath.path.push_back(robotPose);
     return emptyPath;
 }
