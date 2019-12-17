@@ -518,6 +518,7 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
                 std::cout << "\n";
         }
     pose_xyt_t desiredpose;
+    pose_xyt_t goalPose2;
     desiredpose.x = rounditup(multi[0][0]);
     desiredpose.y = rounditup(multi[1][0]);
     desiredpose.theta = 0;
@@ -525,15 +526,30 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     std::cout << "desiredPose.x" << desiredpose.x << ","
               << "desiredpose.y" << desiredpose.y << std::endl;
 
-    std::cout << "1\n";
     // currentPath_ = planner_.planPath(currentPose_, desiredpose);
+
+    float dist = sqrt((desiredpose.x - currentPose_.x) * (desiredpose.x - currentPose_.x) + (desiredpose.y - currentPose_.y) * (desiredpose.y - currentPose_.y));
+    std::cout << "dist: "  << dist << std::endl;
+
+    float theta = atan2((desiredpose.y - currentPose_.y),(desiredpose.x - currentPose_.x));
+    // float c = desiredpose.y - desiredpose.x * m;
+
+    goalPose2.x = currentPose_.x + cos(theta)*(dist - 0.10);
+    goalPose2.y = currentPose_.y + sin(theta) * (dist - 0.10);
+    goalPose2.theta = 0;
+
+    std::cout << "goalPose2.x: " << goalPose2.x << ","
+              << "goalPose2.y: " << goalPose2.y << std::endl;
     robot_path_t emptyPath;
     emptyPath.utime = utime_now();
-    emptyPath.path_length = 0;
-    emptyPath.path.push_back(desiredpose);
+    emptyPath.path_length = 2;
+    emptyPath.path.push_back(currentPose_);
+    emptyPath.path.push_back(goalPose2);
 
     currentPath_ = emptyPath;
 
+    lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
+    std::cin.get();
 
     //currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
     // std::cout << "Printing the path to grab the block\n";
@@ -543,7 +559,7 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     // }
     // currentPath_.path.pop_back();
 
-    std::cout << "after assigning path...\n";
+    std::cout << "after assigning path...\n";   
 
     most_recent_path_time = currentPath_.utime;
 
