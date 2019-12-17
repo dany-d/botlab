@@ -11,6 +11,15 @@
 #include <unistd.h>
 #include <cassert>
 #include <vector>
+#include <unistd.h>
+#include <thread>
+#include <chrono>
+
+
+
+float eucl_dist(pose_xyt_t currentPose_, pose_xyt_t desiredpose){
+    return sqrt((desiredpose.x - currentPose_.x) * (desiredpose.x - currentPose_.x) + (desiredpose.y - currentPose_.y) * (desiredpose.y - currentPose_.y));
+}
 
 const float kReachedPositionThreshold = 0.05f;  // must get within this distance of a position for it to be explored
 
@@ -295,7 +304,7 @@ int8_t Exploration::executeInitializing(void)
     lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
 
     pose_xyt_t goalPose;
-    goalPose.x = 0.6;
+    goalPose.x = 0.2;
     goalPose.y = 0;
     goalPose.theta = 0;
 
@@ -321,51 +330,38 @@ int8_t Exploration::executeInitializing(void)
     std::cout << "after assigning path...\n";
 
     most_recent_path_time = currentPath_.utime;
-    usleep(5000);
-
-    return exploration_status_t::STATE_DETECT_BLOCKS;
+    // usleep(5000);
+    if(eucl_dist(currentPose_,goalPose)<0.5){
+        return exploration_status_t::STATE_DETECT_BLOCKS;
+    }
 }
-
 
 int8_t Exploration::executeExploringMap(bool initialize)
 {
-        //////////////////////// TODO: Implement your method for exploring the map ///////////////////////////
-    /*
-    * NOTES:
-    *   - At the end of each iteration, then (1) or (2) must hold, otherwise exploration is considered to have failed:
-    *       (1) frontiers_.empty() == true      : all frontiers have been explored as determined by find_map_frontiers()
-    *       (2) currentPath_.path_length > 1 : currently following a path to the next frontier
-    *
-    *   - Use the provided function find_map_frontiers() to find all frontiers in the map.
-    *   - You will need to implement logic to select which frontier to explore.
-    *   - You will need to implement logic to decide when to select a new frontier to explore. Take into consideration:
-    *       -- The map is evolving as you drive, so what previously looked like a safe path might not be once you have
-    *           explored more of the map.
-    *       -- You will likely be able to see the frontier before actually reaching the end of the path leading to it.
-    */
+// * NOTES : *-At the end of each iteration, then(1) or (2) must hold, otherwise exploration is considered to have failed : *(1)frontiers_.empty() == true : all frontiers have been explored as determined by find_map_frontiers() * (2)currentPath_.path_length > 1 : currently following a path to the next frontier * * -Use the provided function find_map_frontiers() to find all frontiers in the map.* -You will need to implement logic to select which frontier to explore.* -You will need to implement logic to decide when to select a new frontier to explore.Take into consideration : *--The map is evolving as you drive, so what previously looked like a safe path might not be once you have *explored more of the map.* --You will likely be able to see the frontier before actually reaching the end of the path leading to it.* /
     //TODO:
     // int numBlock = 4;
     // int block_itr = 0;
+
+    // float theta = 0.25
     // std::vector<pose_xyt_t> desiredposes;
     // desiredposes[0].x = 0;
     // desiredposes[0].y = 0;
     // desiredposes[0].theta = 0;
-    //
+
     // desiredposes[1].x = 0;
     // desiredposes[1].y = 0;
     // desiredposes[1].theta = 0;
-    //
+
     // desiredposes[2].x = 0;
     // desiredposes[2].y = 0;
     // desiredposes[2].theta = 0;
-    //
+
     // desiredposes[3].x = 0;
     // desiredposes[3].y = 0;
     // desiredposes[3].theta = 0;
 
-
-
-
+    return exploration_status_t::STATE_DETECT_BLOCKS;
 }
 
 int8_t Exploration::executeBlockDetection(bool initialize)
@@ -373,7 +369,7 @@ int8_t Exploration::executeBlockDetection(bool initialize)
     // Publish on channel to camera to detect block
       mbot_arm_cmd_t detectblock;
       detectblock.utime = utime_now();
-      detectblock.mbot_cmd = 1;
+          detectblock.mbot_cmd = 1;
 
       std::cout<<"executeBlockDetection: Command sent to camera to detect blocks\n";
       lcmInstance_->publish(COMMAND_ARM, &detectblock);
@@ -384,8 +380,10 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
 {
     // mbot_arm_block_t block_to_pick=currentblocklist_;
     // std::cout<<"\n Block to pick up from location: "<<block_to_pick.pose.x<<"  "<<block_to_pick.pose.y<<"\n";
+    planner_.setMap(currentMap_);
 
     if(incomingblocklist_.pose.x == 10000 && incomingblocklist_.pose.y == 10000){
+      std::cout<<"No blocks detected, returning to exploring state...\n";
       mbot_arm_cmd_t detectblock;
       detectblock.utime = utime_now();
       detectblock.mbot_cmd = 1;
@@ -395,10 +393,10 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
       return exploration_status_t::STATE_EXPLORING_MAP;
     }
 
-    planner_.setMap(currentMap_);
     // frontiers_ = find_map_frontiers(currentMap_, currentPose_);
 
     mbot_arm_block_t block_to_pick = incomingblocklist_;
+    
 
     // Only execute below commands if number of blocks is > 0
     float transform[3][3];
@@ -431,31 +429,31 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     transform[1][2] = currentPose_.y;
     transform[2][2] = 1;
 
-    std::cout << "\n"
-              << "Transform Matrix: "
-              << "\n";
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-        {
-            std::cout << " " << transform[i][j];
-            if (j == 3 - 1)
-                std::cout << "\n";
-        }
+    // std::cout << "\n"
+    //           << "Transform Matrix: "
+    //           << "\n";
+    // for (int i = 0; i < 3; ++i)
+    //     for (int j = 0; j < 3; ++j)
+    //     {
+    //         std::cout << " " << transform[i][j];
+    //         if (j == 3 - 1)
+    //             std::cout << "\n";
+    //     }
 
-    std::cout << "\n"
-              << "Block Matrix: "
-              << "\n";
+    // std::cout << "\n"
+    //           << "Block Matrix: "
+    //           << "\n";
     float block_coords[3][1] = {{block_to_pick.pose.x},
                                 {block_to_pick.pose.y},
                                 {1}};
 
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 1; ++j)
-        {
-            std::cout << " " << block_coords[i][j];
-            if (j == 1 - 1)
-                std::cout << "\n";
-        }
+    // for (int i = 0; i < 3; ++i)
+    //     for (int j = 0; j < 1; ++j)
+    //     {
+    //         std::cout << " " << block_coords[i][j];
+    //         if (j == 1 - 1)
+    //             std::cout << "\n";
+    //     }
 
     // float block_coords[3][1]={{1},
     //                             {1}, //0.41199721
@@ -484,16 +482,16 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
             //     multi[i][j]=0;
         }
     // Displaying the multiplication of two matrix.
-    std::cout << "\n"
-              << "Output Matrix: "
-              << "\n";
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 1; ++j)
-        {
-            std::cout << " " << multi[i][j];
-            if (j == 1 - 1)
-                std::cout << "\n";
-        }
+    // std::cout << "\n"
+    //           << "Output Matrix: "
+    //           << "\n";
+    // for (int i = 0; i < 3; ++i)
+    //     for (int j = 0; j < 1; ++j)
+    //     {
+    //         std::cout << " " << multi[i][j];
+    //         if (j == 1 - 1)
+    //             std::cout << "\n";
+    //     }
     pose_xyt_t desiredpose;
     pose_xyt_t goalPose2;
     desiredpose.x = rounditup(multi[0][0]);
@@ -526,7 +524,10 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     currentPath_ = emptyPath;
 
     lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
+    // std::exploreThread::sleep_for(std::chrono::seconds(5)); //milli
     //std::cin.get();
+
+    
 
 
 
@@ -541,8 +542,11 @@ int8_t Exploration::executeGrabPlanner(bool initialize)
     std::cout << "after assigning path...\n";
 
     most_recent_path_time = currentPath_.utime;
-    usleep(5000); //milli
-    return exploration_status_t::STATE_GRAB_BLOCK;
+
+    if (eucl_dist(currentPose_, goalPose2) < 0.05)
+    {
+        return exploration_status_t::STATE_GRAB_BLOCK;
+    }
 }
 
 
@@ -585,7 +589,10 @@ int8_t Exploration::executeDropBlock(bool initialize)
   most_recent_path_time = currentPath_.utime;
   lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
 
-  usleep(5000);
+//   usleep(5000);
+    
+
+
   mbot_arm_cmd_t dropBlock;
   dropBlock.utime = utime_now();
   dropBlock.mbot_cmd = 2;
@@ -609,7 +616,7 @@ int8_t Exploration::executeDropBlock(bool initialize)
   lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
 
 
-  return exploration_status_t::INITIALIZING;
+  return exploration_status_t::STATE_INITIALIZING;
     //return 0;
 }
 
@@ -623,58 +630,59 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
 
-    std::cout<<"executeReturningHome: Now trying to go home\n";
-    planner_.setMap(currentMap_);
-    planner_.setNumFrontiers(0);
-    if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
-      || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))>kReachedPositionThreshold){
-        currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
-        currentTarget_ =  currentPath_.path[currentPath_.path_length-1];
-    }
-    std::cout<<"Path length to home: "<<currentPath_.path.size()<<"\n";
-    /////////////////////////////// End student code ///////////////////////////////
+    // std::cout<<"executeReturningHome: Now trying to go home\n";
+    // planner_.setMap(currentMap_);
+    // planner_.setNumFrontiers(0);
+    // if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0
+    //   || sqrt((homePose_.x-currentTarget_.x)*(homePose_.x-currentTarget_.x) + (homePose_.y-currentTarget_.y)*(homePose_.y-currentTarget_.y))>kReachedPositionThreshold){
+    //     currentPath_ = plan_path_to_home(homePose_, currentPose_, currentMap_, planner_);
+    //     currentTarget_ =  currentPath_.path[currentPath_.path_length-1];
+    // }
+    // std::cout<<"Path length to home: "<<currentPath_.path.size()<<"\n";
+    // /////////////////////////////// End student code ///////////////////////////////
 
-    /////////////////////////   Create the status message    //////////////////////////
-    exploration_status_t status;
-    status.utime = utime_now();
-    status.team_number = teamNumber_;
-    status.state = exploration_status_t::STATE_RETURNING_HOME;
+    // /////////////////////////   Create the status message    //////////////////////////
+    // exploration_status_t status;
+    // status.utime = utime_now();
+    // status.team_number = teamNumber_;
+    // status.state = exploration_status_t::STATE_RETURNING_HOME;
 
-    double distToHome = distance_between_points(Point<float>(homePose_.x, homePose_.y),
-                                                Point<float>(currentPose_.x, currentPose_.y));
-    // If we're within the threshold of home, then we're done.
-    if (distToHome <= kReachedPositionThreshold)
-    {
-        status.status = exploration_status_t::STATUS_COMPLETE;
-        std::cout << "Returning complete.\n";
-    }
-    // Otherwise, if there's a path, then keep following it
-    else if (currentPath_.path.size() >= 1)
-    {
-        status.status = exploration_status_t::STATUS_IN_PROGRESS;
-    }
-    // Else, there's no valid path to follow and we aren't home, so we have failed.
-    else
-    {
-        status.status = exploration_status_t::STATUS_FAILED;
-        std::cout << "No vaild path and not reached home.\n";
-    }
+    // double distToHome = distance_between_points(Point<float>(homePose_.x, homePose_.y),
+    //                                             Point<float>(currentPose_.x, currentPose_.y));
+    // // If we're within the threshold of home, then we're done.
+    // if (distToHome <= kReachedPositionThreshold)
+    // {
+    //     status.status = exploration_status_t::STATUS_COMPLETE;
+    //     std::cout << "Returning complete.\n";
+    // }
+    // // Otherwise, if there's a path, then keep following it
+    // else if (currentPath_.path.size() >= 1)
+    // {
+    //     status.status = exploration_status_t::STATUS_IN_PROGRESS;
+    // }
+    // // Else, there's no valid path to follow and we aren't home, so we have failed.
+    // else
+    // {
+    //     status.status = exploration_status_t::STATUS_FAILED;
+    //     std::cout << "No vaild path and not reached home.\n";
+    // }
 
-    lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
+    // lcmInstance_->publish(EXPLORATION_STATUS_CHANNEL, &status);
 
-    ////////////////////////////   Determine the next state    ////////////////////////
-    if (status.status == exploration_status_t::STATUS_IN_PROGRESS)
-    {
-        return exploration_status_t::STATE_RETURNING_HOME;
-    }
-    else if (status.status == exploration_status_t::STATUS_FAILED)
-    {
-        return exploration_status_t::STATE_FAILED_EXPLORATION;
-    }
-    else
-    {
-        return exploration_status_t::STATE_COMPLETED_EXPLORATION;
-    }
+    // ////////////////////////////   Determine the next state    ////////////////////////
+    // if (status.status == exploration_status_t::STATUS_IN_PROGRESS)
+    // {
+    //     return exploration_status_t::STATE_RETURNING_HOME;
+    // }
+    // else if (status.status == exploration_status_t::STATUS_FAILED)
+    // {
+    //     return exploration_status_t::STATE_FAILED_EXPLORATION;
+    // }
+    // else
+    // {
+    //     return exploration_status_t::STATE_COMPLETED_EXPLORATION;
+    // }
+    return exploration_status_t::STATE_INITIALIZING;
 }
 
 int8_t Exploration::executeCompleted(bool initialize)
