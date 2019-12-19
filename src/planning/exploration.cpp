@@ -246,20 +246,33 @@ int8_t Exploration::executeExploringMap(bool initialize)
     */
     planner_.setMap(currentMap_);
     frontiers_ = find_map_frontiers(currentMap_, currentPose_);
-    if (frontiers_.size() > 0)
-    {
-        std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
-        if (!planner_.isPathSafe(currentPath_) || currentPath_.path_length == 0 ||
-            fabs(currentPose_.x - currentTarget_.x) + fabs(currentPose_.y - currentTarget_.y) < kReachedPositionThreshold)
-        { // frontiers_.size()!=prev_frontier_size){
-            prev_frontier_size = frontiers_.size();
-            currentPath_ = plan_path_to_frontier(frontiers_,currentPose_, currentMap_, planner_);
-            if (currentPath_.path_length == 0){
-                frontiers_.pop_back();
-            }
-            currentTarget_ = currentPath_.path[currentPath_.path_length - 1];
-        }
-    }
+    currentTarget_.x = 0.62;
+    currentTarget_.y = -1.05;
+    currentPath_ = planner_.planPath(currentPose_, currentTarget_);
+    lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
+    std::cin.get();
+
+
+    currentPose_.x = 0.62;
+    currentPose_.y = -0.95;
+    currentTarget_.x = 0.0;
+    currentTarget_.y = 0.0;
+    currentPath_ = planner_.planPath(currentPose_, currentTarget_);
+    lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
+    std::cin.get();
+
+    // currentPose_.x = 0.0;
+    // currentPose_.y = 0.0;
+    //
+
+
+
+    planner_.setMap(currentMap_);
+    frontiers_ = find_map_frontiers(currentMap_, currentPose_);
+    currentTarget_.x = 0.0;
+    currentTarget_.y = -1.0;
+    currentPath_ = planner_.planPath(currentPose_, currentTarget_);
+    lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
 
     most_recent_path_time = currentPath_.utime;
 
@@ -332,7 +345,7 @@ int8_t Exploration::executeReturningHome(bool initialize)
         if(currentPath_.path_length > 10){
             currentPath_.path.resize(int(0.3*currentPath_.path.size()));
         }
-        
+
     }
     std::cout << "Path length to home: " << currentPath_.path.size() << "\n";
     /////////////////////////////// End student code ///////////////////////////////

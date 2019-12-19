@@ -4,6 +4,7 @@
 #include <cassert>
 #include <common/timestamp.h>
 #include <common/angle_functions.hpp>
+#include <chrono>
 using namespace std;
 
 
@@ -18,9 +19,9 @@ ParticleFilter::ParticleFilter(int numParticles)
 void ParticleFilter::initializeFilterAtPose(const pose_xyt_t& pose)
 {
     for (int i_num = 0; i_num < kNumParticles_; i_num++){
-        posterior_[i_num].pose.x = (rand()%5000-2500)*0.00002+pose.x;
-        posterior_[i_num].pose.y = (rand()%5000-2500)*0.00002+pose.y;
-        posterior_[i_num].pose.theta = wrap_to_pi((rand()%5000-2500)*0.0000154+pose.theta);
+        posterior_[i_num].pose.x = ((rand()%5000)*0.0002)*1.3-0.3+pose.x;
+        posterior_[i_num].pose.y = ((rand()%5000)*0.0002)*3.2-2.8+pose.y;
+        posterior_[i_num].pose.theta = wrap_to_pi(((rand()%5000)*0.0002)*2*3.14+pose.theta);
         posterior_[i_num].pose.utime = pose.utime;
         posterior_[i_num].parent_pose = pose;
         posterior_[i_num].weight = 1.0 /kNumParticles_;
@@ -38,6 +39,7 @@ pose_xyt_t ParticleFilter::updateFilter(const pose_xyt_t&      odometry,
 {
     // Only update the particles if motion was detected. If the robot didn't move, then
     // obviously don't do anything.
+    auto start = std::chrono::high_resolution_clock::now();
     bool hasRobotMoved = actionModel_.updateAction(odometry);
     if(hasRobotMoved)
     {
@@ -65,7 +67,9 @@ pose_xyt_t ParticleFilter::updateFilter(const pose_xyt_t&      odometry,
     posteriorPose_.utime = odometry.utime;
     //std::cout<<"pose x: "<<posteriorPose_.x<<" y: "<<posteriorPose_.y<<std::endl;
     // std::cout<<"Hit: "<<2<<" "<<std::endl;
-
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds> (stop - start);
+    //std::cout<<duration.count()<<std::endl;
     return posteriorPose_;
 }
 
